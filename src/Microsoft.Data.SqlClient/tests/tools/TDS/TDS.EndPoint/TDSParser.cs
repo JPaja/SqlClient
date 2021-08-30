@@ -68,7 +68,7 @@ namespace Microsoft.SqlServer.TDS.EndPoint
         /// <summary>
         /// Enable transport encryption
         /// </summary>
-        protected void EnableClientTransportEncryption(string server)
+        protected void EnableClientTransportEncryption(string server, X509Certificate clientCertificate)
         {
             // Check if transport encryption is applied
             if (Transport.InnerStream is SslStream)
@@ -90,8 +90,16 @@ namespace Microsoft.SqlServer.TDS.EndPoint
             // Wrap multiplexer stream with SSL stream
             SslStream ssl = new SslStream(multiplexer, true, new RemoteCertificateValidationCallback(_ValidateServerCertificate));
 
-            // Secure the channel
-            ssl.AuthenticateAsClient(server);
+            if(clientCertificate != null)
+            {
+                // Secure the channel using client certificate
+                ssl.AuthenticateAsClient(server, new X509CertificateCollection(new[] { clientCertificate }), ServerSslProtocol, true);
+            }
+            else
+            {
+                // Secure the channel
+                ssl.AuthenticateAsClient(server);
+            }
 
             // Replace TDS stream with raw transport stream in multiplexer
             multiplexer.InnerStream = Transport.InnerStream;
@@ -129,7 +137,6 @@ namespace Microsoft.SqlServer.TDS.EndPoint
 
             // Secure the channel
             ssl.AuthenticateAsServer(certificate, false, ServerSslProtocol, false);
-
             // Replace TDS stream with raw transport stream in multiplexer
             multiplexer.InnerStream = Transport.InnerStream;
 

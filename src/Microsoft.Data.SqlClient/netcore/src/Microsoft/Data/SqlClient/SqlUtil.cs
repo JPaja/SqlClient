@@ -294,6 +294,10 @@ namespace Microsoft.Data.SqlClient
         {
             return ADP.Argument(System.StringsHelper.GetString(Strings.SQL_IntegratedWithPassword));
         }
+        internal static Exception NoClientCertificate()
+        {
+            return ADP.Argument("There is no ClientCertificate file");
+        }
         internal static Exception InteractiveWithPassword()
         {
             return ADP.Argument(System.StringsHelper.GetString(Strings.SQL_InteractiveWithPassword));

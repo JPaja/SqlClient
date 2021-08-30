@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Security;
 using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using Microsoft.Data.Common;
 using Microsoft.Data.SqlTypes;

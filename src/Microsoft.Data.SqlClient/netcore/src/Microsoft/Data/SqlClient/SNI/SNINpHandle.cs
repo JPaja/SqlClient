@@ -305,15 +305,23 @@ namespace Microsoft.Data.SqlClient.SNI
             _sendCallback = sendCallback;
         }
 
-        public override uint EnableSsl(uint options)
+        public override uint EnableSsl(uint options, X509Certificate clientCertificate)
         {
             using (TrySNIEventScope.Create(nameof(SNINpHandle)))
             {
                 _validateCert = (options & TdsEnums.SNI_SSL_VALIDATE_CERTIFICATE) != 0;
                 try
                 {
+                    if (clientCertificate != null)
+                    {
+                        var collection = new X509CertificateCollection(new[] { clientCertificate });
+                        _sslStream.AuthenticateAsClient(_targetServer, collection, SslProtocols.Tls12 , true);
+                    }
+                    else
+                    {
+                        _sslStream.AuthenticateAsClient(_targetServer);
 
-                    _sslStream.AuthenticateAsClient(_targetServer);
+                    }
                     _sslOverTdsStream.FinishHandshake();
                 }
                 catch (AuthenticationException aue)

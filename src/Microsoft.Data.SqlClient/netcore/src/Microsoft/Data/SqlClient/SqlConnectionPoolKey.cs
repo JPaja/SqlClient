@@ -4,6 +4,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.Data.Common;
 
 namespace Microsoft.Data.SqlClient
@@ -14,13 +15,15 @@ namespace Microsoft.Data.SqlClient
     {
         private int _hashValue;
         private SqlCredential _credential;
+        private X509Certificate _clientCertificate;
         private readonly string _accessToken;
 
-        internal SqlConnectionPoolKey(string connectionString, SqlCredential credential, string accessToken) : base(connectionString)
+        internal SqlConnectionPoolKey(string connectionString, SqlCredential credential, string accessToken, X509Certificate clientCertificate) : base(connectionString)
         {
-            Debug.Assert(_credential == null || _accessToken == null, "Credential and AccessToken can't have the value at the same time.");
+            Debug.Assert(_credential == null || _accessToken == null || _clientCertificate == null, "Credential, ClientCertificate and AccessToken can't have the value at the same time.");
             _credential = credential;
             _accessToken = accessToken;
+            _clientCertificate = clientCertificate;
             CalculateHashCode();
         }
 
@@ -28,6 +31,7 @@ namespace Microsoft.Data.SqlClient
         {
             _credential = key.Credential;
             _accessToken = key.AccessToken;
+            _clientCertificate = key.ClientCertificate;
             CalculateHashCode();
         }
 
@@ -50,6 +54,8 @@ namespace Microsoft.Data.SqlClient
             }
         }
 
+        internal X509Certificate ClientCertificate => _clientCertificate;
+
         internal SqlCredential Credential => _credential;
 
         internal string AccessToken
@@ -65,6 +71,7 @@ namespace Microsoft.Data.SqlClient
             SqlConnectionPoolKey key = obj as SqlConnectionPoolKey;
             return (key != null
                 && _credential == key._credential
+                && _clientCertificate == key._clientCertificate
                 && ConnectionString == key.ConnectionString
                 && string.CompareOrdinal(_accessToken, key._accessToken) == 0);
         }
@@ -83,6 +90,13 @@ namespace Microsoft.Data.SqlClient
                 unchecked
                 {
                     _hashValue = _hashValue * 17 + _credential.GetHashCode();
+                }
+            }
+            else if (_clientCertificate != null)
+            {
+                unchecked
+                {
+                    _hashValue = _hashValue * 17 + _clientCertificate.GetHashCode();
                 }
             }
             else if (_accessToken != null)

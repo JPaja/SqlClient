@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 
 namespace Microsoft.Data.SqlClient.SNI
@@ -197,11 +198,11 @@ namespace Microsoft.Data.SqlClient.SNI
         /// <summary>
         /// Enable SSL
         /// </summary>
-        public uint EnableSsl(uint options)
+        public uint EnableSsl(uint options, X509Certificate clientCertificate)
         {
             using (TrySNIEventScope.Create(nameof(SNIMarsConnection)))
             {
-                return _lowerHandle.EnableSsl(options);
+                return _lowerHandle.EnableSsl(options, clientCertificate);
             }
         }
 

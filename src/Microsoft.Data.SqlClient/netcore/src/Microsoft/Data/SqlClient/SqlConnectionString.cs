@@ -459,9 +459,16 @@ namespace Microsoft.Data.SqlClient
                 throw ADP.InvalidConnectRetryIntervalValue();
             }
 
+            //TODO ClientCertificateAuthentification
+
             if (Authentication != SqlAuthenticationMethod.NotSpecified && _integratedSecurity == true)
             {
                 throw SQL.AuthenticationAndIntegratedSecurity();
+            }
+
+            if (Authentication == SqlClient.SqlAuthenticationMethod.SqlCertificate && !HasClientCertificate)
+            {
+                throw SQL.NoClientCertificate();
             }
 
             if (Authentication == SqlClient.SqlAuthenticationMethod.ActiveDirectoryIntegrated && HasPasswordKeyword)

@@ -109,6 +109,7 @@ namespace Microsoft.Data.Common
         internal const string ActiveDirectoryManagedIdentityString = "Active Directory Managed Identity";
         internal const string ActiveDirectoryMSIString = "Active Directory MSI";
         internal const string ActiveDirectoryDefaultString = "Active Directory Default";
+        internal const string SqlCertificateDefaultString = "SQL Certificate";
 
 #if DEBUG
         private static string[] s_supportedAuthenticationModes =
@@ -200,6 +201,12 @@ namespace Microsoft.Data.Common
             }
             else if (StringComparer.InvariantCultureIgnoreCase.Equals(value, ActiveDirectoryDefaultString)
                 || StringComparer.InvariantCultureIgnoreCase.Equals(value, Convert.ToString(SqlAuthenticationMethod.ActiveDirectoryDefault, CultureInfo.InvariantCulture)))
+            {
+                result = SqlAuthenticationMethod.ActiveDirectoryDefault;
+                isSuccess = true;
+            }
+            else if (StringComparer.InvariantCultureIgnoreCase.Equals(value, SqlCertificateDefaultString)
+               || StringComparer.InvariantCultureIgnoreCase.Equals(value, Convert.ToString(SqlAuthenticationMethod.SqlCertificate, CultureInfo.InvariantCulture)))
             {
                 result = SqlAuthenticationMethod.ActiveDirectoryDefault;
                 isSuccess = true;
@@ -658,7 +665,8 @@ namespace Microsoft.Data.Common
                 || value == SqlAuthenticationMethod.ActiveDirectoryManagedIdentity
                 || value == SqlAuthenticationMethod.ActiveDirectoryMSI
                 || value == SqlAuthenticationMethod.ActiveDirectoryDefault
-                || value == SqlAuthenticationMethod.NotSpecified;
+                || value == SqlAuthenticationMethod.NotSpecified
+                || value == SqlAuthenticationMethod.SqlCertificate;
         }
 
         internal static string AuthenticationTypeToString(SqlAuthenticationMethod value)
@@ -685,6 +693,8 @@ namespace Microsoft.Data.Common
                     return ActiveDirectoryMSIString;
                 case SqlAuthenticationMethod.ActiveDirectoryDefault:
                     return ActiveDirectoryDefaultString;
+                case SqlAuthenticationMethod.SqlCertificate:
+                    return SqlCertificateDefaultString;
                 default:
                     return null;
             }
