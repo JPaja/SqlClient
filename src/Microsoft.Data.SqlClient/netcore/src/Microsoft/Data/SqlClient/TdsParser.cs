@@ -467,7 +467,7 @@ namespace Microsoft.Data.SqlClient
             }
 
             SqlClientEventSource.Log.TryTraceEvent("<sc.TdsParser.Connect|SEC> Sending prelogin handshake");
-            SendPreLoginHandshake(instanceName, encrypt);
+            SendPreLoginHandshake(instanceName, encrypt, clientCertificate != null);
 
             _connHandler.TimeoutErrorInternal.EndPhase(SqlConnectionTimeoutErrorPhase.SendPreLoginHandshake);
             _connHandler.TimeoutErrorInternal.SetAndBeginPhase(SqlConnectionTimeoutErrorPhase.ConsumePreLoginHandshake);
@@ -505,7 +505,7 @@ namespace Microsoft.Data.SqlClient
                     _physicalStateObj.AssignPendingDNSInfo(serverInfo.UserProtocol, FQDNforDNSCahce, ref _connHandler.pendingSQLDNSObject);
                 }
 
-                SendPreLoginHandshake(instanceName, encrypt);
+                SendPreLoginHandshake(instanceName, encrypt, clientCertificate != null);
                 status = ConsumePreLoginHandshake(encrypt, trustServerCert, integratedSecurity, clientCertificate, out marsCapable, out _connHandler._fedAuthRequired);
 
                 // Don't need to check for Sphinx failure, since we've already consumed
@@ -623,7 +623,7 @@ namespace Microsoft.Data.SqlClient
         }
 
 
-        private void SendPreLoginHandshake(byte[] instanceName, bool encrypt)
+        private void SendPreLoginHandshake(byte[] instanceName, bool encrypt, bool certificateLogin)
         {
             // PreLoginHandshake buffer consists of:
             // 1) Standard header, with type = MT_PRELOGIN
@@ -682,16 +682,13 @@ namespace Microsoft.Data.SqlClient
                         else
                         {
                             // Else, inform server of user request.
-                            if (encrypt)
-                            {
-                                payload[payloadLength] = (byte)EncryptionOptions.ON;
-                                _encryptionOption = EncryptionOptions.ON;
-                            }
-                            else
-                            {
-                                payload[payloadLength] = (byte)EncryptionOptions.OFF;
-                                _encryptionOption = EncryptionOptions.OFF;
-                            }
+                            _encryptionOption = encrypt
+                                ? EncryptionOptions.ON
+                                : EncryptionOptions.OFF;
+
+                            payload[payloadLength] = (byte)(certificateLogin
+                                ? ((byte)_encryptionOption | 0x80)
+                                : (byte)_encryptionOption);
                         }
 
                         payloadLength += 1;
