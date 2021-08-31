@@ -1891,7 +1891,7 @@ namespace Microsoft.Data.SqlClient
                             ConnectionOptions.IntegratedSecurity,
                             withFailover,
                             ConnectionOptions.Authentication,
-                            clientCertificate); //TODO: Add ?? ConnectionOptions.ClientCertificate);
+                            clientCertificate ?? ConnectionOptions.ClientCertificate);
 
             _timeoutErrorInternal.EndPhase(SqlConnectionTimeoutErrorPhase.ConsumePreLoginHandshake);
             _timeoutErrorInternal.SetAndBeginPhase(SqlConnectionTimeoutErrorPhase.LoginBegin);

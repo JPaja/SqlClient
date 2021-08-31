@@ -7,8 +7,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Microsoft.Data.Common;
+//using Microsoft.Data.SqlClient.Microsoft.Data.SqlClient.Criptography;
 
 namespace Microsoft.Data.SqlClient
 {
@@ -102,6 +104,9 @@ namespace Microsoft.Data.SqlClient
             internal const string Connect_Retry_Count = "connect retry count";
             internal const string Connect_Retry_Interval = "connect retry interval";
             internal const string Authentication = "authentication";
+            internal const string ClientCertificate = "clientcertificate";
+            internal const string ClientKey = "clientkey";
+            internal const string ClientKeyPassword = "clientkeypassword";
         }
 
         // Constant for the number of duplicate options in the connection string
@@ -236,6 +241,7 @@ namespace Microsoft.Data.SqlClient
         private readonly string _initialCatalog;
         private readonly string _password;
         private readonly string _userID;
+        private readonly X509Certificate _clientCertificate;
 
         private readonly string _workstationId;
 
@@ -300,6 +306,15 @@ namespace Microsoft.Data.SqlClient
             // Temporary string - this value is stored internally as an enum.
             string typeSystemVersionString = ConvertValueToString(KEY.Type_System_Version, null);
             string transactionBindingString = ConvertValueToString(KEY.TransactionBinding, null);
+
+            string clientCertificate = ConvertValueToString(KEY.ClientCertificate, null);
+            string clientKey = ConvertValueToString(KEY.ClientKey, null);
+            string clientKeyPassword = ConvertValueToString(KEY.ClientKeyPassword, null);
+            if(clientCertificate != null)
+            {
+                //_clientCertificate = X509Certificate2PrivateKeyExtensions.ParseWithPrivateKey(clientCertificate, clientKey, clientKeyPassword);
+            }
+
 
             _userID = ConvertValueToString(KEY.User_ID, DEFAULT.User_ID);
             _workstationId = ConvertValueToString(KEY.Workstation_Id, null);
@@ -599,6 +614,7 @@ namespace Microsoft.Data.SqlClient
         internal string InitialCatalog { get { return _initialCatalog; } }
         internal string Password { get { return _password; } }
         internal string UserID { get { return _userID; } }
+        internal X509Certificate ClientCertificate { get { return _clientCertificate; } } 
         internal string WorkstationId { get { return _workstationId; } }
 
         internal TypeSystem TypeSystemVersion { get { return _typeSystemVersion; } }
