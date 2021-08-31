@@ -312,6 +312,14 @@ namespace Microsoft.Data.SqlClient
             string clientKeyPassword = ConvertValueToString(KEY.ClientKeyPassword, null);
             if(clientCertificate != null)
             {
+                try
+                {
+                    _clientCertificate = new X509Certificate2(clientCertificate, clientKeyPassword);
+                }
+                catch
+                {
+
+                }
                 //_clientCertificate = X509Certificate2PrivateKeyExtensions.ParseWithPrivateKey(clientCertificate, clientKey, clientKeyPassword);
             }
 
