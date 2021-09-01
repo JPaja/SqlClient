@@ -385,7 +385,14 @@ namespace Microsoft.Data.SqlClient.SNI
 
                     // Hack for Windoze Bug No credentials are available in the security package 
                     // SslStream not working with ephemeral keys
-                    return new X509Certificate2(thisCert.Export(X509ContentType.Pkcs12));
+                    try
+                    {
+                        return new X509Certificate2(thisCert.Export(X509ContentType.Pkcs12));
+                    }
+                    catch
+                    {
+                        return thisCert;
+                    }
                 }
             }
             return null;

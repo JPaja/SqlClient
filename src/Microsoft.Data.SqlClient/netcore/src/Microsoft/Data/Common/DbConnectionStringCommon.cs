@@ -890,6 +890,9 @@ namespace Microsoft.Data.Common
         internal const string EnclaveAttestationUrl = _emptyString;
         internal const SqlConnectionAttestationProtocol AttestationProtocol = SqlConnectionAttestationProtocol.NotSpecified;
         internal const SqlConnectionIPAddressPreference IPAddressPreference = SqlConnectionIPAddressPreference.IPv4First;
+        internal const string ClientCertificate = _emptyString;
+        internal const string ClientKey = _emptyString;
+        internal const string ClientKeyPassword = _emptyString;
     }
 
 
@@ -927,6 +930,9 @@ namespace Microsoft.Data.Common
         internal const string EnclaveAttestationUrl = "Enclave Attestation Url";
         internal const string AttestationProtocol = "Attestation Protocol";
         internal const string IPAddressPreference = "IP Address Preference";
+        internal const string ClientCertificate = "ClientCertificate";
+        internal const string ClientKey = "ClientKey";
+        internal const string ClientKeyPassword = "ClientKeyPassword";
 
         // common keywords (OleDb, OracleClient, SqlClient)
         internal const string DataSource = "Data Source";

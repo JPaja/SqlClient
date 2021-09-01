@@ -87,9 +87,9 @@ namespace Microsoft.Data.Common
             internal const string Persist_Security_Info = "persist security info";
             internal const string User_ID = "user id";
             internal const string AttachDBFileName = "attachdbfilename";
-            internal const string ClientCertificate = "client certificate";
-            internal const string ClientKey = "client key";
-            internal const string ClientKeyPassword = "client key password";
+            internal const string ClientCertificate = "clientcertificate";
+            internal const string ClientKey = "clientkey";
+            internal const string ClientKeyPassword = "clientkeypassword";
         }
 
         // known connection string common synonyms

@@ -727,6 +727,10 @@ namespace Microsoft.Data.SqlClient
                     { KEY.Connect_Retry_Interval, KEY.Connect_Retry_Interval },
                     { KEY.Authentication, KEY.Authentication },
                     { KEY.IPAddressPreference, KEY.IPAddressPreference },
+                    { KEY.ClientCertificate, KEY.ClientCertificate },
+                    { KEY.ClientKey, KEY.ClientKey },
+                    { KEY.ClientKeyPassword, KEY.ClientKeyPassword },
+
 
                     { SYNONYM.APP, KEY.Application_Name },
                     { SYNONYM.APPLICATIONINTENT, KEY.ApplicationIntent },
