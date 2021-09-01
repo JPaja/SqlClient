@@ -123,7 +123,8 @@ namespace Microsoft.Data.Common
             "ActiveDirectoryDeviceCodeFlow",
             "ActiveDirectoryManagedIdentity",
             "ActiveDirectoryMSI",
-            "ActiveDirectoryDefault"
+            "ActiveDirectoryDefault",
+            "SqlCertificate"
         };
 
         private static bool IsValidAuthenticationMethodEnum()
@@ -208,7 +209,7 @@ namespace Microsoft.Data.Common
             else if (StringComparer.InvariantCultureIgnoreCase.Equals(value, SqlCertificateDefaultString)
                || StringComparer.InvariantCultureIgnoreCase.Equals(value, Convert.ToString(SqlAuthenticationMethod.SqlCertificate, CultureInfo.InvariantCulture)))
             {
-                result = SqlAuthenticationMethod.ActiveDirectoryDefault;
+                result = SqlAuthenticationMethod.SqlCertificate;
                 isSuccess = true;
             }
             else
@@ -655,7 +656,7 @@ namespace Microsoft.Data.Common
 
         internal static bool IsValidAuthenticationTypeValue(SqlAuthenticationMethod value)
         {
-            Debug.Assert(Enum.GetNames(typeof(SqlAuthenticationMethod)).Length == 10, "SqlAuthenticationMethod enum has changed, update needed");
+            Debug.Assert(Enum.GetNames(typeof(SqlAuthenticationMethod)).Length == 11, "SqlAuthenticationMethod enum has changed, update needed");
             return value == SqlAuthenticationMethod.SqlPassword
                 || value == SqlAuthenticationMethod.ActiveDirectoryPassword
                 || value == SqlAuthenticationMethod.ActiveDirectoryIntegrated

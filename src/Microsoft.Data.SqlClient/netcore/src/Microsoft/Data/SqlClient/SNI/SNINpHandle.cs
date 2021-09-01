@@ -91,7 +91,7 @@ namespace Microsoft.Data.SqlClient.SNI
                 }
 
                 _sslOverTdsStream = new SslOverTdsStream(_pipeStream, _connectionId);
-                _sslStream = new SNISslStream(_sslOverTdsStream, true, new RemoteCertificateValidationCallback(ValidateServerCertificate));
+                _sslStream = new SNISslStream(_sslOverTdsStream, true, new RemoteCertificateValidationCallback(ValidateServerCertificate), new LocalCertificateSelectionCallback(ServerCertificateSelector));
 
                 _stream = _pipeStream;
                 _status = TdsEnums.SNI_SUCCESS;
@@ -370,6 +370,25 @@ namespace Microsoft.Data.SqlClient.SNI
                 SqlClientEventSource.Log.TrySNITraceEvent(nameof(SNINpHandle), EventType.INFO, "Connection Id {0}, Proceeding to SSL certificate validation.", args0: ConnectionId);
                 return SNICommon.ValidateSslServerCertificate(_targetServer, cert, policyErrors);
             }
+        }
+
+        //Hack fix to avoid exception in sslStream.AuthAsClient https://github.com/dotnet/runtime/issues/45680#issuecomment-739912495
+        //Issue should be fixed in .net 6
+        private X509Certificate ServerCertificateSelector(object sender, string targetHost, X509CertificateCollection localCertificates, X509Certificate remoteCertificate, string[] acceptableIssuers)
+        {
+            if (localCertificates != null && localCertificates.Count > 0)
+            {
+                foreach (var thisCert in localCertificates)
+                {
+                    if (!System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
+                        return thisCert;
+
+                    // Hack for Windoze Bug No credentials are available in the security package 
+                    // SslStream not working with ephemeral keys
+                    return new X509Certificate2(thisCert.Export(X509ContentType.Pkcs12));
+                }
+            }
+            return null;
         }
 
         /// <summary>
