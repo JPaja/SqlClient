@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Microsoft.Data.SqlClient.SNI
 {
@@ -62,7 +63,7 @@ namespace Microsoft.Data.SqlClient.SNI
         /// <summary>
         /// Enable SSL
         /// </summary>
-        public abstract uint EnableSsl(uint options);
+        public abstract uint EnableSsl(uint options, X509Certificate certificate);
 
         /// <summary>
         /// Disable SSL

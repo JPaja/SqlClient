@@ -928,8 +928,7 @@ namespace Microsoft.Data.SqlClient
                                 info |= TdsEnums.SNI_SSL_IGNORE_CHANNEL_BINDINGS;
                             }
 
-                            //TODO: add clientCertificate as parameter
-                            error = _physicalStateObj.EnableSsl(ref info);
+                            error = _physicalStateObj.EnableSsl(ref info, clientCertificate);
 
                             if (error != TdsEnums.SNI_SUCCESS)
                             {

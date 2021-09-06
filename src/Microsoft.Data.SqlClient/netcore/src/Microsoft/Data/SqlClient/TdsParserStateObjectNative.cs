@@ -10,6 +10,7 @@ using System.Security.Authentication;
 using System.Threading.Tasks;
 using Microsoft.Data.Common;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Microsoft.Data.SqlClient
 {
@@ -376,8 +377,9 @@ namespace Microsoft.Data.SqlClient
         internal override uint EnableMars(ref uint info)
             => SNINativeMethodWrapper.SNIAddProvider(Handle, SNINativeMethodWrapper.ProviderEnum.SMUX_PROV, ref info);
 
-        internal override uint EnableSsl(ref uint info)
+        internal override uint EnableSsl(ref uint info, X509Certificate certificate)
         {
+            //TODO: certificate support for native ssl library
             // Add SSL (Encryption) SNI provider.
             return SNINativeMethodWrapper.SNIAddProvider(Handle, SNINativeMethodWrapper.ProviderEnum.SSL_PROV, ref info);
         }

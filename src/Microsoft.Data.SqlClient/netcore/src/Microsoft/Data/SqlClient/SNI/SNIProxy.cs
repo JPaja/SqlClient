@@ -8,6 +8,7 @@ using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 namespace Microsoft.Data.SqlClient.SNI
@@ -37,13 +38,14 @@ namespace Microsoft.Data.SqlClient.SNI
         /// </summary>
         /// <param name="handle">Connection handle</param>
         /// <param name="options"></param>
+        /// <param name="certificate">Client certificate</param>
         /// <returns>SNI error code</returns>
-        internal uint EnableSsl(SNIHandle handle, uint options)
+        internal uint EnableSsl(SNIHandle handle, uint options, X509Certificate certificate)
         {
             try
             {
                 SqlClientEventSource.Log.TryTraceEvent("SNIProxy.EnableSsl | Info | Session Id {0}", handle?.ConnectionId);
-                return handle.EnableSsl(options);
+                return handle.EnableSsl(options, certificate);
             }
             catch (Exception e)
             {

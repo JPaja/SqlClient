@@ -578,13 +578,21 @@ namespace Microsoft.Data.SqlClient.SNI
         /// <summary>
         /// Enable SSL
         /// </summary>
-        public override uint EnableSsl(uint options)
+        public override uint EnableSsl(uint options, X509Certificate certificate)
         {
             _validateCert = (options & TdsEnums.SNI_SSL_VALIDATE_CERTIFICATE) != 0;
 
             try
             {
-                _sslStream.AuthenticateAsClient(_targetServer);
+                if (certificate != null)
+                {
+                    var collection = new X509CertificateCollection(new[] { certificate });
+                    _sslStream.AuthenticateAsClient(_targetServer, collection, SslProtocols.Tls12, true);
+                }
+                else
+                {
+                    _sslStream.AuthenticateAsClient(_targetServer);
+                }
                 _sslOverTdsStream.FinishHandshake();
             }
             catch (AuthenticationException aue)
