@@ -27,6 +27,7 @@ namespace Microsoft.Data.Common
                 _keyChain = ParseInternal(_parsetable, _usersConnectionString, true, synonyms, false);
                 HasPasswordKeyword = (_parsetable.ContainsKey(KEY.Password) || _parsetable.ContainsKey(SYNONYM.Pwd));
                 HasUserIdKeyword = (_parsetable.ContainsKey(KEY.User_ID) || _parsetable.ContainsKey(SYNONYM.UID));
+                HasClientCertificate = (_parsetable.ContainsKey(KEY.ClientCertificate));
             }
         }
 
@@ -37,6 +38,7 @@ namespace Microsoft.Data.Common
             _keyChain = connectionOptions._keyChain;
             HasPasswordKeyword = connectionOptions.HasPasswordKeyword;
             HasUserIdKeyword = connectionOptions.HasUserIdKeyword;
+            HasClientCertificate = connectionOptions.HasClientCertificate;
         }
 
         public bool IsEmpty => _keyChain == null;

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Microsoft.Data.Common;
 
@@ -103,6 +104,9 @@ namespace Microsoft.Data.SqlClient
             internal const string Connect_Retry_Count = "connect retry count";
             internal const string Connect_Retry_Interval = "connect retry interval";
             internal const string Authentication = "authentication";
+            internal const string ClientCertificate = "clientcertificate";
+            internal const string ClientKey = "clientkey";
+            internal const string ClientKeyPassword = "clientkeypassword";
         }
 
         // Constant for the number of duplicate options in the connection string
@@ -238,6 +242,7 @@ namespace Microsoft.Data.SqlClient
         private readonly string _initialCatalog;
         private readonly string _password;
         private readonly string _userID;
+        private readonly X509Certificate _clientCertificate;
 
         private readonly string _workstationId;
 
@@ -304,7 +309,23 @@ namespace Microsoft.Data.SqlClient
             string typeSystemVersionString = ConvertValueToString(KEY.Type_System_Version, null);
             string transactionBindingString = ConvertValueToString(KEY.TransactionBinding, null);
 
-            _userID = ConvertValueToString(KEY.User_ID, DEFAULT.User_ID);
+            string clientCertificate = ConvertValueToString(KEY.ClientCertificate, null);
+            string clientKey = ConvertValueToString(KEY.ClientKey, null);
+            string clientKeyPassword = ConvertValueToString(KEY.ClientKeyPassword, null);
+            if (clientCertificate != null)
+            {
+                try
+                {
+                    //TODO: Add support for PEM and PFX files
+                    _clientCertificate = new X509Certificate2(clientCertificate, clientKeyPassword);
+                }
+                catch
+                {
+
+                }
+            }
+
+                _userID = ConvertValueToString(KEY.User_ID, DEFAULT.User_ID);
             _workstationId = ConvertValueToString(KEY.Workstation_Id, null);
 
             if (_loadBalanceTimeout < 0)
@@ -472,6 +493,11 @@ namespace Microsoft.Data.SqlClient
                 throw SQL.IntegratedWithPassword();
             }
 
+            if (Authentication == SqlClient.SqlAuthenticationMethod.SqlCertificate && !HasClientCertificate)
+            {
+                throw SQL.NoClientCertificate();
+            }
+
             if (Authentication == SqlAuthenticationMethod.ActiveDirectoryInteractive && HasPasswordKeyword)
             {
                 throw SQL.InteractiveWithPassword();
@@ -596,6 +622,7 @@ namespace Microsoft.Data.SqlClient
         internal string Password { get { return _password; } }
         internal string UserID { get { return _userID; } }
         internal string WorkstationId { get { return _workstationId; } }
+        internal X509Certificate ClientCertificate { get { return _clientCertificate; } }
 
         internal TypeSystem TypeSystemVersion { get { return _typeSystemVersion; } }
         internal Version TypeSystemAssemblyVersion { get { return _typeSystemAssemblyVersion; } }
@@ -700,6 +727,9 @@ namespace Microsoft.Data.SqlClient
                     { KEY.Connect_Retry_Interval, KEY.Connect_Retry_Interval },
                     { KEY.Authentication, KEY.Authentication },
                     { KEY.IPAddressPreference, KEY.IPAddressPreference },
+                    { KEY.ClientCertificate, KEY.ClientCertificate },
+                    { KEY.ClientKey, KEY.ClientKey },
+                    { KEY.ClientKeyPassword, KEY.ClientKeyPassword },
 
                     { SYNONYM.APP, KEY.Application_Name },
                     { SYNONYM.APPLICATIONINTENT, KEY.ApplicationIntent },

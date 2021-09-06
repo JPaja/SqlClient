@@ -87,6 +87,9 @@ namespace Microsoft.Data.Common
             internal const string Persist_Security_Info = "persist security info";
             internal const string User_ID = "user id";
             internal const string AttachDBFileName = "attachdbfilename";
+            internal const string ClientCertificate = "clientcertificate";
+            internal const string ClientKey = "clientkey";
+            internal const string ClientKeyPassword = "clientkeypassword";
         }
 
         // known connection string common synonyms
@@ -98,6 +101,7 @@ namespace Microsoft.Data.Common
 
         internal readonly bool HasPasswordKeyword;
         internal readonly bool HasUserIdKeyword;
+        internal readonly bool HasClientCertificate;
 
         private readonly string _usersConnectionString;
         private readonly Dictionary<string, string> _parsetable;
@@ -166,7 +170,7 @@ namespace Microsoft.Data.Common
                 Debug.Assert(string.Equals(keyname, keyname?.ToLower(), StringComparison.InvariantCulture), "missing ToLower");
                 string realkeyname = ((null != synonyms) ? (string)synonyms[keyname] : keyname);
 
-                if ((KEY.Password != realkeyname) && (SYNONYM.Pwd != realkeyname))
+                if ((KEY.Password != realkeyname) && (SYNONYM.Pwd != realkeyname) && (KEY.ClientKeyPassword != realkeyname))
                 {
                     // don't trace passwords ever!
                     if (null != keyvalue)
@@ -641,7 +645,7 @@ namespace Microsoft.Data.Common
             StringBuilder builder = new StringBuilder(_usersConnectionString.Length);
             for (NameValuePair current = _keyChain; null != current; current = current.Next)
             {
-                if ((KEY.Password != current.Name) && (SYNONYM.Pwd != current.Name))
+                if ((KEY.Password != current.Name) && (SYNONYM.Pwd != current.Name) && (KEY.ClientKeyPassword != current.Name))
                 {
                     builder.Append(_usersConnectionString, copyPosition, current.Length);
                     if (fakePassword)
