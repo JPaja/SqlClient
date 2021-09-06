@@ -13,11 +13,11 @@ namespace Microsoft.Data.SqlClient
 
         private const string UseManagedNetworkingOnWindows = "Switch.Microsoft.Data.SqlClient.UseManagedNetworkingOnWindows";
 
-        private static bool shouldUseManagedSNI;
+        //private static bool shouldUseManagedSNI;
 
         // If the appcontext switch is set then Use Managed SNI based on the value. Otherwise Native SNI.dll will be used by default.
-        public static bool UseManagedSNI { get; } =
-            AppContext.TryGetSwitch(UseManagedNetworkingOnWindows, out shouldUseManagedSNI) ? shouldUseManagedSNI : false;
+        public static bool UseManagedSNI => true; //Force managed sni due to certificate authentification not working on native library
+            //AppContext.TryGetSwitch(UseManagedNetworkingOnWindows, out shouldUseManagedSNI) ? shouldUseManagedSNI : false;
 
         public EncryptionOptions EncryptionOptions
         {
