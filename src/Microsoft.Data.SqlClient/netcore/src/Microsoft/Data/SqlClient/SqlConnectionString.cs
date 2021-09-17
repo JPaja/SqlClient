@@ -10,6 +10,7 @@ using System.Net.NetworkInformation;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Microsoft.Data.Common;
+using Microsoft.Data.SqlClient.Criptography;
 //using Microsoft.Data.SqlClient.Microsoft.Data.SqlClient.Criptography;
 
 namespace Microsoft.Data.SqlClient
@@ -312,15 +313,31 @@ namespace Microsoft.Data.SqlClient
             string clientKeyPassword = ConvertValueToString(KEY.ClientKeyPassword, null);
             if(clientCertificate != null)
             {
-                try
+                var index = clientCertificate.IndexOf(':');
+                if (index < 0)
+                    throw new Exception("No certificate type specified");
+                var type = clientCertificate.Substring(0, index).ToLower();
+                var value = clientCertificate.Substring(index + 1);
+                if (type == "file")
                 {
-                    _clientCertificate = new X509Certificate2(clientCertificate, clientKeyPassword);
+                    _clientCertificate = CertificateUtilis.ParseWithPrivateKey(value, clientKey, clientKeyPassword);
                 }
-                catch
+                else if(type == "sha1")
                 {
-
+                    var certificates = CertStoreUtils.GetCertificates(X509FindType.FindByThumbprint, value);
+                    if (certificates.Length == 0)
+                        throw new Exception($"Certificate with thumbprint {value} is not found");
+                    _clientCertificate = certificates[0];
                 }
-                //_clientCertificate = X509Certificate2PrivateKeyExtensions.ParseWithPrivateKey(clientCertificate, clientKey, clientKeyPassword);
+                else if (type == "subject")
+                {
+                    var certificates = CertStoreUtils.GetCertificates(X509FindType.FindBySubjectName, value);
+                    if (certificates.Length == 0)
+                        throw new Exception($"Certificate with subject name {value} is not found");
+                    if (certificates.Length != 1)
+                        throw new Exception($"There are multiple certificates with subject name {value} but with different thumbprint. Please use thumbprint as identifier");
+                    _clientCertificate = certificates[0];
+                }
             }
 
 
@@ -524,6 +541,8 @@ namespace Microsoft.Data.SqlClient
                 throw SQL.NonInteractiveWithPassword(DbConnectionStringBuilderUtil.ActiveDirectoryDefaultString);
             }
         }
+
+
 
         // This c-tor is used to create SSE and user instance connection strings when user instance is set to true
         // BUG (VSTFDevDiv) 479687: Using TransactionScope with Linq2SQL against user instances fails with "connection has been broken" message

@@ -397,6 +397,21 @@
     <Compile Condition="$(TargetFramework.StartsWith('netcoreapp2.'))" Include="Microsoft\Data\SqlClient\SNI\SNIStreams.Task.cs" />
     <Compile Condition="!$(TargetFramework.StartsWith('netcoreapp2.'))" Include="Microsoft\Data\SqlClient\SNI\SNIStreams.ValueTask.cs" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\CertStoreUtils.cs" />
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\CertificateUtilis.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\PVK\PVKUtils.cs" />
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\PEM\CryptoPool.cs" />
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\PEM\PemEmulator.cs" />
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\PEM\PemEncoder.cs" />
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\PEM\PemFields.cs" />
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\PEM\PemKeyImportHelpers.cs" />
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\PEM\PemLabels.cs" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(OSGroup)' != 'AnyOS' AND '$(TargetFramework)' != 'netstandard2.0' AND '$(BuildSimulator)' == 'true'">
     <Compile Include="Microsoft\Data\SqlClient\SimulatorEnclaveProvider.NetCoreApp.cs" />
   </ItemGroup>
@@ -875,6 +890,9 @@
       <LastGenOutput>Strings.Designer.cs</LastGenOutput>
       <CustomToolNamespace>System</CustomToolNamespace>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Microsoft\Data\SqlClient\Criptography\" />
   </ItemGroup>
   <Import Project="$(ToolsDir)targets\GenerateThisAssemblyCs.targets" />
   <Import Project="$(ToolsDir)targets\ResolveContract.targets" Condition="'$(OSGroup)' == 'AnyOS'" />
