@@ -5,9 +5,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.Data.Common;
 using Microsoft.Data.SqlClient.Criptography;
@@ -255,6 +257,8 @@ namespace Microsoft.Data.SqlClient
 
         private readonly string _expandedAttachDBFilename; // expanded during construction so that CreatePermissionSet & Expand are consistent
 
+        private static readonly Regex _certificateThumbprintRegex = new Regex(@"^[a-fA-F0-9]{40}$", RegexOptions.Compiled);
+
         internal SqlConnectionString(string connectionString) : base(connectionString, GetParseSynonyms())
         {
             ThrowUnsupportedIfKeywordSet(KEY.Connection_Reset);
@@ -308,35 +312,66 @@ namespace Microsoft.Data.SqlClient
             string typeSystemVersionString = ConvertValueToString(KEY.Type_System_Version, null);
             string transactionBindingString = ConvertValueToString(KEY.TransactionBinding, null);
 
-            string clientCertificate = ConvertValueToString(KEY.ClientCertificate, null);
             string clientKey = ConvertValueToString(KEY.ClientKey, null);
+            if (clientKey != null)
+            {
+                clientKey = clientKey.Trim();
+                if (string.IsNullOrWhiteSpace(clientKey)) //Empty or whitespace
+                {
+                    throw ADP.InvalidConnectionOptionValue(KEY.ClientKey);
+                }
+                if (clientKey != null && !File.Exists(clientKey.Trim()))
+                {
+
+                }
+            }
+
             string clientKeyPassword = ConvertValueToString(KEY.ClientKeyPassword, null);
-            if(clientCertificate != null)
+            if(clientKeyPassword != null)
+            {
+                clientKeyPassword = clientKeyPassword.Trim();
+            }
+
+            string clientCertificate = ConvertValueToString(KEY.ClientCertificate, null);
+            if (clientCertificate != null)
             {
                 var index = clientCertificate.IndexOf(':');
                 if (index < 0)
-                    throw new Exception("No certificate type specified");
+                    throw ADP.InvalidConnectionOptionValue(KEY.ClientCertificate);
                 var type = clientCertificate.Substring(0, index).ToLower();
                 var value = clientCertificate.Substring(index + 1);
+                if(string.IsNullOrWhiteSpace(type) || string.IsNullOrWhiteSpace(value))
+                    throw ADP.InvalidConnectionOptionValue(KEY.ClientCertificate);
+                type = type.Trim().ToLower();
+                value = type.Trim();
                 if (type == "file")
                 {
-                    _clientCertificate = CertificateUtilis.ParseWithPrivateKey(value, clientKey, clientKeyPassword);
+                    if (!File.Exists(value))
+                        throw SQL.ClientCertificateFileNotExsisting(value);
+                    _clientCertificate = CertificateUtilis.ParseWithPrivateKey(value, clientKey, clientKeyPassword) ?? throw SQL.CertificateParseError();
                 }
                 else if(type == "sha1")
                 {
+                    if (!_certificateThumbprintRegex.IsMatch(value))
+                        throw SQL.ClientKeyThumbprintInvaliFormat(value);
+                    value = value.ToUpper(); //X509FindType.FindByThumbprint requires uppercase hex
                     var certificates = CertStoreUtils.GetCertificates(X509FindType.FindByThumbprint, value);
                     if (certificates.Length == 0)
-                        throw new Exception($"Certificate with thumbprint {value} is not found");
+                        throw SQL.CertificateThumbprintKeyStoreNotFound(value);
                     _clientCertificate = certificates[0];
                 }
                 else if (type == "subject")
                 {
                     var certificates = CertStoreUtils.GetCertificates(X509FindType.FindBySubjectName, value);
                     if (certificates.Length == 0)
-                        throw new Exception($"Certificate with subject name {value} is not found");
+                        throw SQL.CertificateSubjectNameKeyStoreNotFound(value);
                     if (certificates.Length != 1)
-                        throw new Exception($"There are multiple certificates with subject name {value} but with different thumbprint. Please use thumbprint as identifier");
+                        throw SQL.CertificateSubjectNameMultipleCertificates(value);
                     _clientCertificate = certificates[0];
+                }
+                else
+                {
+                    throw ADP.InvalidConnectionOptionValue(KEY.ClientCertificate);
                 }
             }
 
@@ -508,7 +543,7 @@ namespace Microsoft.Data.SqlClient
 
             if (Authentication == SqlClient.SqlAuthenticationMethod.SqlCertificate && !HasClientCertificate)
             {
-                throw SQL.NoClientCertificate();
+                throw SQL.ClientCertificateNotPresesent();
             }
 
             if (Authentication == SqlClient.SqlAuthenticationMethod.ActiveDirectoryIntegrated && HasPasswordKeyword)

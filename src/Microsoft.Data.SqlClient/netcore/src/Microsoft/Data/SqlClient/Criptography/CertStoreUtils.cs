@@ -36,7 +36,7 @@ namespace Microsoft.Data.SqlClient.Criptography
             }
 
             return collection
-                .DistinctCertificates()
+                .DistinctAndPrioritizePrivateCertificates()
                 .ToArray();
         }
 
@@ -58,7 +58,7 @@ namespace Microsoft.Data.SqlClient.Criptography
         }
 
         //TODO: Confirm that it behaves as intended
-        private static IEnumerable<X509Certificate2> DistinctCertificates(this IEnumerable<X509Certificate2> collection)
+        private static IEnumerable<X509Certificate2> DistinctAndPrioritizePrivateCertificates(this IEnumerable<X509Certificate2> collection)
         {
             return collection
                 .OrderByDescending(c => c.HasPrivateKey) // In case if we have certificate with private key and without with same thumbprint we want to preffer one with private key
