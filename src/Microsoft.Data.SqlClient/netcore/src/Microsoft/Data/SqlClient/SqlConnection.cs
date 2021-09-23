@@ -47,7 +47,7 @@ namespace Microsoft.Data.SqlClient
         private Tuple<TaskCompletionSource<DbConnectionInternal>, Task> _currentCompletion;
 
         private SqlCredential _credential;
-        private X509Certificate _clientCertificate;
+        private X509Certificate2 _clientCertificate;
         private string _connectionString;
         private int _connectRetryCount;
         private string _accessToken; // Access Token to be used for token based authentication
@@ -200,56 +200,20 @@ namespace Microsoft.Data.SqlClient
         }
 
         /// <include file='../../../../../../../doc/snippets/Microsoft.Data.SqlClient/SqlConnection.xml' path='docs/members[@name="SqlConnection"]/ctorConnectionStringCertificate/*' />
-        public SqlConnection(string connectionString, X509Certificate clientCertificate) : this()
+        public SqlConnection(string connectionString, X509Certificate2 clientCertificate) : this()
         {
             //TODO: Make constructor for SqlConnection with ClientCertificate
             ConnectionString = connectionString;
             if (clientCertificate != null)
             {
-                // The following checks are necessary as setting Credential property will call CheckAndThrowOnInvalidCombinationOfConnectionStringAndSqlCredential
-                //  CheckAndThrowOnInvalidCombinationOfConnectionStringAndSqlCredential it will throw InvalidOperationException rather than ArgumentException
-                //  Need to call setter on Credential property rather than setting _credential directly as pool groups need to be checked
                 SqlConnectionString connectionOptions = (SqlConnectionString)ConnectionOptions;
-                //TODO: Update check functions
-               /* if (UsesClearUserIdOrPassword(connectionOptions))
-                {
-                    throw ADP.InvalidMixedArgumentOfSecureAndClearCredential();
-                }
 
-                if (UsesIntegratedSecurity(connectionOptions))
-                {
-                    throw ADP.InvalidMixedArgumentOfSecureCredentialAndIntegratedSecurity();
-                }
-                else if (UsesActiveDirectoryIntegrated(connectionOptions))
-                {
-                    throw SQL.SettingCredentialWithIntegratedArgument();
-                }
-                else if (UsesActiveDirectoryInteractive(connectionOptions))
-                {
-                    throw SQL.SettingCredentialWithInteractiveArgument();
-                }
-                else if (UsesActiveDirectoryDeviceCodeFlow(connectionOptions))
-                {
-                    throw SQL.SettingCredentialWithDeviceFlowArgument();
-                }
-                else if (UsesActiveDirectoryManagedIdentity(connectionOptions))
-                {
-                    throw SQL.SettingCredentialWithNonInteractiveArgument(DbConnectionStringBuilderUtil.ActiveDirectoryManagedIdentityString);
-                }
-                else if (UsesActiveDirectoryMSI(connectionOptions))
-                {
-                    throw SQL.SettingCredentialWithNonInteractiveArgument(DbConnectionStringBuilderUtil.ActiveDirectoryMSIString);
-                }
-                else if (UsesActiveDirectoryDefault(connectionOptions))
-                {
-                    throw SQL.SettingCredentialWithNonInteractiveArgument(DbConnectionStringBuilderUtil.ActiveDirectoryDefaultString);
-                }*/
+                if (!_clientCertificate.HasPrivateKey)
+                    throw SQL.CertificateDoesNotHavePrivateKey();
 
                 ClientCertificate = clientCertificate;
             }
-            // else
-            //      clientCertificate == null:  we should not set "ClientCertificate" as this will do additional validation check and
-            //      checking pool groups which is not necessary. All necessary operation is already done by calling "ConnectionString = connectionString"
+    
         }
 
         private SqlConnection(SqlConnection connection)
@@ -649,7 +613,8 @@ namespace Microsoft.Data.SqlClient
                     }
                     else if (_clientCertificate != null)
                     {
-                        //TODO: Add some exception cases
+                        if (!_clientCertificate.HasPrivateKey)
+                            throw SQL.CertificateDoesNotHavePrivateKey();
                     }
                     else if (_accessToken != null)
                     {
@@ -716,68 +681,31 @@ namespace Microsoft.Data.SqlClient
 
         /// <include file='../../../../../../../doc/snippets/Microsoft.Data.SqlClient/SqlConnection.xml' path='docs/members[@name="SqlConnection"]/AccessToken/*' />
         // ClientCertificate: To be used for certificate based authentication
-        public X509Certificate ClientCertificate
+        public X509Certificate2 ClientCertificate
         {
             get
             {
-                var result = _clientCertificate;
-
-                //TODO: Confirm if this is necessary for clientCertificate case
-
-                // When a connection is connecting or is ever opened, make credential available only if "Persist Security Info" is set to true
-                //  otherwise, return null
-                SqlConnectionString connectionOptions = (SqlConnectionString)UserConnectionOptions;
-                if (InnerConnection.ShouldHidePassword && connectionOptions != null && !connectionOptions.PersistSecurityInfo)
-                {
-                    result = null;
-                }
-
-                return result;
+                return _clientCertificate;
             }
 
             set
             {
-                // If a connection is connecting or is ever opened, user id/password cannot be set
+                // If a connection is connecting or is ever opened, certificate cannot be set
                 if (!InnerConnection.AllowSetConnectionString)
                 {
-                    throw ADP.OpenConnectionPropertySet(nameof(Credential), InnerConnection.State);
+                    throw ADP.OpenConnectionPropertySet(nameof(ClientCertificate), InnerConnection.State);
                 }
 
                 // check if the usage of credential has any conflict with the keys used in connection string
                 if (value != null)
                 {
                     var connectionOptions = (SqlConnectionString)ConnectionOptions;
-                    // Check for Credential being used with Authentication=ActiveDirectoryIntegrated | ActiveDirectoryInteractive |
-                    // ActiveDirectoryDeviceCodeFlow | ActiveDirectoryManagedIdentity/ActiveDirectoryMSI | ActiveDirectoryDefault. Since a different error string is used
-                    // for this case in ConnectionString setter vs in Credential setter, check for this error case before calling
-                    // CheckAndThrowOnInvalidCombinationOfConnectionStringAndSqlCredential, which is common to both setters.
-                    if (UsesActiveDirectoryIntegrated(connectionOptions))
-                    {
-                        throw SQL.SettingCredentialWithIntegratedInvalid();
-                    }
-                    else if (UsesActiveDirectoryInteractive(connectionOptions))
-                    {
-                        throw SQL.SettingCredentialWithInteractiveInvalid();
-                    }
-                    else if (UsesActiveDirectoryDeviceCodeFlow(connectionOptions))
-                    {
-                        throw SQL.SettingCredentialWithDeviceFlowInvalid();
-                    }
-                    else if (UsesActiveDirectoryManagedIdentity(connectionOptions))
-                    {
-                        throw SQL.SettingCredentialWithNonInteractiveInvalid(DbConnectionStringBuilderUtil.ActiveDirectoryManagedIdentityString);
-                    }
-                    else if (UsesActiveDirectoryMSI(connectionOptions))
-                    {
-                        throw SQL.SettingCredentialWithNonInteractiveInvalid(DbConnectionStringBuilderUtil.ActiveDirectoryMSIString);
-                    }
-                    else if (UsesActiveDirectoryDefault(connectionOptions))
-                    {
-                        throw SQL.SettingCredentialWithNonInteractiveInvalid(DbConnectionStringBuilderUtil.ActiveDirectoryDefaultString);
-                    }
 
-                    //TODO: Change requirements for certificate check
-                    CheckAndThrowOnInvalidCombinationOfConnectionStringAndSqlCredential(connectionOptions);
+                    if (!value.HasPrivateKey)
+                        throw SQL.CertificateDoesNotHavePrivateKey();
+
+                    //TODO: Replace exceptions with mixed ceredentials to mixed certificate
+
                     if (_accessToken != null)
                     {
                         throw ADP.InvalidMixedUsageOfCredentialAndAccessToken();

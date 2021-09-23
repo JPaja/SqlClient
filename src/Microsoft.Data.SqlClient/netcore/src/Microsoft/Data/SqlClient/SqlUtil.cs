@@ -294,9 +294,9 @@ namespace Microsoft.Data.SqlClient
         {
             return ADP.Argument(System.StringsHelper.GetString(Strings.SQL_IntegratedWithPassword));
         }
-        internal static Exception ClientCertificateNotPresesent()
+        internal static Exception ClientCertificateMissingValue()
         {
-            return ADP.Argument("Client Certificate is not present");
+            return ADP.Argument("Client certificate is not populated");
         }
 
         internal static Exception InteractiveWithPassword()
@@ -327,6 +327,11 @@ namespace Microsoft.Data.SqlClient
         {
             return ADP.InvalidOperation(System.StringsHelper.GetString(Strings.SQL_SettingNonInteractiveWithCredential, authenticationMode));
         }
+        static internal Exception CertificateDoesNotHavePrivateKey()
+        {
+            return ADP.InvalidOperation("Client certificate does not have prvate key");
+        }
+
         static internal Exception SettingCredentialWithIntegratedArgument()
         {
             return ADP.Argument(System.StringsHelper.GetString(Strings.SQL_SettingCredentialWithIntegrated));

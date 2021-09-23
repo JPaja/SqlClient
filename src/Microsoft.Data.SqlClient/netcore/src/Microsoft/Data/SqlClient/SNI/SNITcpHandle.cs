@@ -648,22 +648,18 @@ namespace Microsoft.Data.SqlClient.SNI
         {
             if (localCertificates != null && localCertificates.Count > 0)
             {
-                foreach (var thisCert in localCertificates)
+                foreach (X509Certificate cert in localCertificates)
                 {
-                    //System.Console.WriteLine("SNI Name: {0}", targetHost);
-
                     if (!System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
-                        return thisCert;
+                        return cert;
 
-                    // Hack for Windoze Bug No credentials are available in the security package 
-                    // SslStream not working with ephemeral keys
                     try
                     {
-                        return new X509Certificate2(thisCert.Export(X509ContentType.Pkcs12));
+                        return new X509Certificate2(cert.Export(X509ContentType.Pkcs12));
                     }
                     catch
                     {
-                        return thisCert;
+                        return cert;
                     }
                 }
             }

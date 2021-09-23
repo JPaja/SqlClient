@@ -543,7 +543,7 @@ namespace Microsoft.Data.SqlClient
 
             if (Authentication == SqlClient.SqlAuthenticationMethod.SqlCertificate && !HasClientCertificate)
             {
-                throw SQL.ClientCertificateNotPresesent();
+                throw SQL.ClientCertificateMissingValue();
             }
 
             if (Authentication == SqlClient.SqlAuthenticationMethod.ActiveDirectoryIntegrated && HasPasswordKeyword)
