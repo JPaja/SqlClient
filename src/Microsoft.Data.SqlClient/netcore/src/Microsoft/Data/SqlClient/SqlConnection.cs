@@ -208,7 +208,7 @@ namespace Microsoft.Data.SqlClient
             {
                 SqlConnectionString connectionOptions = (SqlConnectionString)ConnectionOptions;
 
-                if (!_clientCertificate.HasPrivateKey)
+                if (!clientCertificate.HasPrivateKey)
                     throw SQL.CertificateDoesNotHavePrivateKey();
 
                 ClientCertificate = clientCertificate;
