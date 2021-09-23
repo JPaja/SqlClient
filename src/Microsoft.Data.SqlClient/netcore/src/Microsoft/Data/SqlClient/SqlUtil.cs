@@ -1083,7 +1083,7 @@ namespace Microsoft.Data.SqlClient
         }
         internal static Exception CertificateSubjectNameMultipleCertificates(string subjectName)
         {
-            return ADP.Argument($"There are more than 1 certificates with sbject name {subjectName} in key store. Use thumbprint identification instead");
+            return ADP.Argument($"There are more than 1 certificate with sbject name {subjectName} in key store. Use thumbprint identification instead");
         }
 
         //

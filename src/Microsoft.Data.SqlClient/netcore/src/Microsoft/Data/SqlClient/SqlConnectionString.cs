@@ -343,7 +343,7 @@ namespace Microsoft.Data.SqlClient
                 if(string.IsNullOrWhiteSpace(type) || string.IsNullOrWhiteSpace(value))
                     throw ADP.InvalidConnectionOptionValue(KEY.ClientCertificate);
                 type = type.Trim().ToLower();
-                value = type.Trim();
+                value = value.Trim();
                 if (type == "file")
                 {
                     if (!File.Exists(value))
