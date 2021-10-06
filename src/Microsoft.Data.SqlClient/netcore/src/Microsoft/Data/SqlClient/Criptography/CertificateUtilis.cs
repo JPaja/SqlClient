@@ -26,14 +26,18 @@ namespace Microsoft.Data.SqlClient.Criptography
         {
             try
             {
-                return new X509Certificate2(certificatePath, password);
+                var cert = new X509Certificate2(certificatePath, password);
+                if (cert.HasPrivateKey)
+                    return cert;
             }
             catch { }
 #if !NETSTANDARD2_0
             try
             {
                 var certificate = new X509Certificate2(certificatePath);
-                return certificate.ImportPrivateKey(privateKeyPath, password);
+                var newCert = certificate.ImportPrivateKey(privateKeyPath, password);
+                if (newCert.HasPrivateKey)
+                      return newCert;
             }
             catch
             {

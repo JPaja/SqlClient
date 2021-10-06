@@ -320,9 +320,9 @@ namespace Microsoft.Data.SqlClient
                 {
                     throw ADP.InvalidConnectionOptionValue(KEY.ClientKey);
                 }
-                if (clientKey != null && !File.Exists(clientKey.Trim()))
+                if (clientKey != null && !File.Exists(clientKey))
                 {
-
+                    throw SQL.ClientKeyFileNotExsisting(clientKey);
                 }
             }
 
