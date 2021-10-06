@@ -31,7 +31,7 @@
   <PropertyGroup>
     <DebugType>portable</DebugType>
     <DebugSymbols>true</DebugSymbols>
-    <Version>3.0.0-dev</Version>
+    <Version>3.0.1</Version>
     <AssemblyVersion>3.0.0.1</AssemblyVersion>
     <FileVersion>3.0.0.1</FileVersion>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -395,6 +395,21 @@
     <Compile Include="Microsoft\Data\SqlClient\SqlConnectionFactory.AssemblyLoadContext.cs" />    
     <Compile Include="Microsoft\Data\SqlClient\SqlDependencyUtils.AssemblyLoadContext.cs" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\CertStoreUtils.cs" />
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\CertificateUtilis.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\PVK\PVKUtils.cs" />
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\PEM\CryptoPool.cs" />
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\PEM\PemEmulator.cs" />
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\PEM\PemEncoder.cs" />
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\PEM\PemFields.cs" />
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\PEM\PemKeyImportHelpers.cs" />
+    <Compile Include="Microsoft\Data\SqlClient\Criptography\PEM\PemLabels.cs" />
+  </ItemGroup>
+  
   <ItemGroup Condition="'$(OSGroup)' != 'AnyOS' AND '$(TargetFramework)' != 'netstandard2.0' AND '$(BuildSimulator)' == 'true'">
     <Compile Include="Microsoft\Data\SqlClient\SimulatorEnclaveProvider.NetCoreApp.cs" />
   </ItemGroup>

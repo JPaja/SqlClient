@@ -5,11 +5,14 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.Data.Common;
+using Microsoft.Data.SqlClient.Criptography;
 
 namespace Microsoft.Data.SqlClient
 {
@@ -255,6 +258,8 @@ namespace Microsoft.Data.SqlClient
 
         private readonly string _expandedAttachDBFilename; // expanded during construction so that CreatePermissionSet & Expand are consistent
 
+        private static readonly Regex _certificateThumbprintRegex = new Regex(@"^[a-fA-F0-9]{40}$", RegexOptions.Compiled);
+
         internal SqlConnectionString(string connectionString) : base(connectionString, GetParseSynonyms())
         {
             ThrowUnsupportedIfKeywordSet(KEY.AsynchronousProcessing);
@@ -309,23 +314,70 @@ namespace Microsoft.Data.SqlClient
             string typeSystemVersionString = ConvertValueToString(KEY.Type_System_Version, null);
             string transactionBindingString = ConvertValueToString(KEY.TransactionBinding, null);
 
-            string clientCertificate = ConvertValueToString(KEY.ClientCertificate, null);
             string clientKey = ConvertValueToString(KEY.ClientKey, null);
-            string clientKeyPassword = ConvertValueToString(KEY.ClientKeyPassword, null);
-            if (clientCertificate != null)
+            if (clientKey != null)
             {
-                try
+                clientKey = clientKey.Trim();
+                if (string.IsNullOrWhiteSpace(clientKey)) //Empty or whitespace
                 {
-                    //TODO: Add support for PEM and PFX files
-                    _clientCertificate = new X509Certificate2(clientCertificate, clientKeyPassword);
+                    throw ADP.InvalidConnectionOptionValue(KEY.ClientKey);
                 }
-                catch
+                if (clientKey != null && !File.Exists(clientKey.Trim()))
                 {
-
+                    throw SQL.ClientKeyFileNotExsisting(clientKey);
                 }
             }
 
-                _userID = ConvertValueToString(KEY.User_ID, DEFAULT.User_ID);
+            string clientKeyPassword = ConvertValueToString(KEY.ClientKeyPassword, null);
+            if (clientKeyPassword != null)
+            {
+                clientKeyPassword = clientKeyPassword.Trim();
+            }
+
+            string clientCertificate = ConvertValueToString(KEY.ClientCertificate, null);
+            if (clientCertificate != null)
+            {
+                var index = clientCertificate.IndexOf(':');
+                if (index < 0)
+                    throw ADP.InvalidConnectionOptionValue(KEY.ClientCertificate);
+                var type = clientCertificate.Substring(0, index).ToLower();
+                var value = clientCertificate.Substring(index + 1);
+                if (string.IsNullOrWhiteSpace(type) || string.IsNullOrWhiteSpace(value))
+                    throw ADP.InvalidConnectionOptionValue(KEY.ClientCertificate);
+                type = type.Trim().ToLower();
+                value = value.Trim();
+                if (type == "file")
+                {
+                    if (!File.Exists(value))
+                        throw SQL.ClientCertificateFileNotExsisting(value);
+                    _clientCertificate = CertificateUtilis.ParseWithPrivateKey(value, clientKey, clientKeyPassword) ?? throw SQL.CertificateParseError();
+                }
+                else if (type == "sha1")
+                {
+                    if (!_certificateThumbprintRegex.IsMatch(value))
+                        throw SQL.ClientKeyThumbprintInvaliFormat(value);
+                    value = value.ToUpper(); //X509FindType.FindByThumbprint requires uppercase hex
+                    var certificates = CertStoreUtils.GetCertificates(X509FindType.FindByThumbprint, value);
+                    if (certificates.Length == 0)
+                        throw SQL.CertificateThumbprintKeyStoreNotFound(value);
+                    _clientCertificate = certificates[0];
+                }
+                else if (type == "subject")
+                {
+                    var certificates = CertStoreUtils.GetCertificates(X509FindType.FindBySubjectName, value);
+                    if (certificates.Length == 0)
+                        throw SQL.CertificateSubjectNameKeyStoreNotFound(value);
+                    if (certificates.Length != 1)
+                        throw SQL.CertificateSubjectNameMultipleCertificates(value);
+                    _clientCertificate = certificates[0];
+                }
+                else
+                {
+                    throw ADP.InvalidConnectionOptionValue(KEY.ClientCertificate);
+                }
+            }
+
+            _userID = ConvertValueToString(KEY.User_ID, DEFAULT.User_ID);
             _workstationId = ConvertValueToString(KEY.Workstation_Id, null);
 
             if (_loadBalanceTimeout < 0)
