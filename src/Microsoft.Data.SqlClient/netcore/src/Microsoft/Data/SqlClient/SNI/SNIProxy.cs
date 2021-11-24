@@ -277,15 +277,16 @@ namespace Microsoft.Data.SqlClient.SNI
                 return null;
             }
 
-            int port = -1;
+            int[] ports = null;
             bool isAdminConnection = details._connectionProtocol == DataSource.Protocol.Admin;
             if (details.IsSsrpRequired)
             {
                 try
                 {
-                    port = isAdminConnection ?
+                    ports = new int[]{  isAdminConnection ?
                             SSRP.GetDacPortByInstanceName(hostName, details.InstanceName) :
-                            SSRP.GetPortByInstanceName(hostName, details.InstanceName);
+                            SSRP.GetPortByInstanceName(hostName, details.InstanceName)
+                    };
                 }
                 catch (SocketException se)
                 {
@@ -293,16 +294,20 @@ namespace Microsoft.Data.SqlClient.SNI
                     return null;
                 }
             }
+            else if(details.Ports.Length != 0)
+            {
+                ports = details.Ports;
+            }
             else if (details.Port != -1)
             {
-                port = details.Port;
+                ports = ports = new int[] { details.Port };
             }
             else
             {
-                port = isAdminConnection ? DefaultSqlServerDacPort : DefaultSqlServerPort;
+                ports = ports = new int[] { isAdminConnection ? DefaultSqlServerDacPort : DefaultSqlServerPort };
             }
 
-            return new SNITCPHandle(hostName, port, timerExpire, parallel, ipPreference, cachedFQDN, ref pendingDNSInfo);
+            return new SNITCPHandle(hostName, ports, timerExpire, parallel, ipPreference, cachedFQDN, ref pendingDNSInfo);
         }
 
         /// <summary>
@@ -373,6 +378,7 @@ namespace Microsoft.Data.SqlClient.SNI
         private const char CommaSeparator = ',';
         private const char SemiColon = ':';
         private const char BackSlashCharacter = '\\';
+        private const char MinusCharacter = '-';
 
         private const string DefaultHostName = "localhost";
         private const string DefaultSqlServerInstanceName = "mssqlserver";
@@ -397,6 +403,8 @@ namespace Microsoft.Data.SqlClient.SNI
         /// Provides the port on which the TCP connection should be made if one was specified in Data Source
         /// </summary>
         internal int Port { get; private set; } = -1;
+
+        internal int[] Ports { get; private set; } = Array.Empty<int>();
 
         /// <summary>
         /// Provides the inferred Instance Name from Server Data Source
@@ -573,21 +581,49 @@ namespace Microsoft.Data.SqlClient.SNI
                     return false;
                 }
 
-                int port;
-                if (!int.TryParse(parameter, out port))
+                if(parameter.Contains("-"))
                 {
-                    ReportSNIError(SNIProviders.TCP_PROV);
-                    return false;
-                }
+                    var paramPorts = parameter.Split('-');
+                    var ports = new int[paramPorts.Length];
+                    for(int i = 0; i < ports.Length; i++)
+                    {
+                        int port;
+                        if (!int.TryParse(parameter, out port))
+                        {
+                            ReportSNIError(SNIProviders.TCP_PROV);
+                            return false;
+                        }
 
-                // If the user explicitly specified a invalid port in the connection string.
-                if (port < 1)
+                        // If the user explicitly specified a invalid port in the connection string.
+                        if (port < 1)
+                        {
+                            ReportSNIError(SNIProviders.TCP_PROV);
+                            return false;
+                        }
+                        ports[i] = port;
+                    }
+                    Port = ports[0];
+                    Ports = ports;
+                }
+                else
                 {
-                    ReportSNIError(SNIProviders.TCP_PROV);
-                    return false;
-                }
+                    int port;
+                    if (!int.TryParse(parameter, out port))
+                    {
+                        ReportSNIError(SNIProviders.TCP_PROV);
+                        return false;
+                    }
 
-                Port = port;
+                    // If the user explicitly specified a invalid port in the connection string.
+                    if (port < 1)
+                    {
+                        ReportSNIError(SNIProviders.TCP_PROV);
+                        return false;
+                    }
+
+                    Port = port;
+                }
+               
             }
             // Instance Name Handling. Only if we found a '\' and we did not find a port in the Data Source
             else if (backSlashIndex > -1)
