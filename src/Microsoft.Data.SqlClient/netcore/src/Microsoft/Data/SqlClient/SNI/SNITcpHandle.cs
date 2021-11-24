@@ -346,7 +346,7 @@ namespace Microsoft.Data.SqlClient.SNI
                 return null;
             }
 
-            Socket[] sockets = new Socket[ipAddresses.Length];
+            Socket[] sockets = new Socket[ipAddresses.Length * ports.Length];
             AddressFamily[] preferedIPFamilies = new AddressFamily[2];
 
             if (ipPreference == SqlConnectionIPAddressPreference.IPv4First)
@@ -380,9 +380,9 @@ namespace Microsoft.Data.SqlClient.SNI
                 {
                     for (int n = 0; n < ipAddresses.Length; n++)
                     {
-                        foreach (var port in ports)
+                        for (int p = 0; p < ports.Length; p++)
                         {
-
+                            int port = ports[p];
                             IPAddress ipAddress = ipAddresses[n];
                             try
                             {
@@ -393,21 +393,22 @@ namespace Microsoft.Data.SqlClient.SNI
                                         continue;
                                     }
 
-                                    sockets[n] = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                                    var socket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                                    sockets[p * ports.Length + n] = socket;
 
                                     // enable keep-alive on socket
-                                    SetKeepAliveValues(ref sockets[n]);
+                                    SetKeepAliveValues(ref sockets[p * ports.Length + n]);
 
                                     SqlClientEventSource.Log.TrySNITraceEvent(nameof(SNITCPHandle), EventType.INFO, "Connecting to IP address {0} and port {1} using {2} address family.",
                                                                               args0: ipAddress,
                                                                               args1: port,
                                                                               args2: ipAddress.AddressFamily);
-                                    sockets[n].Connect(ipAddress, port);
-                                    if (sockets[n] != null) // sockets[n] can be null if cancel callback is executed during connect()
+                                    socket.Connect(ipAddress, port);
+                                    if (socket != null) // sockets[n] can be null if cancel callback is executed during connect()
                                     {
-                                        if (sockets[n].Connected)
+                                        if (socket.Connected)
                                         {
-                                            availableSocket = sockets[n];
+                                            availableSocket = socket;
                                             if (ipAddress.AddressFamily == AddressFamily.InterNetwork)
                                             {
                                                 IPv4String = ipAddress.ToString();
@@ -421,8 +422,8 @@ namespace Microsoft.Data.SqlClient.SNI
                                         }
                                         else
                                         {
-                                            sockets[n].Dispose();
-                                            sockets[n] = null;
+                                            socket.Dispose();
+                                            sockets[p * ports.Length + n] = null;
                                         }
                                     }
                                 }

@@ -588,7 +588,7 @@ namespace Microsoft.Data.SqlClient.SNI
                     for(int i = 0; i < ports.Length; i++)
                     {
                         int port;
-                        if (!int.TryParse(parameter, out port))
+                        if (!int.TryParse(paramPorts[i], out port))
                         {
                             ReportSNIError(SNIProviders.TCP_PROV);
                             return false;
