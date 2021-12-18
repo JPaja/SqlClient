@@ -96,7 +96,7 @@ namespace Microsoft.Data.SqlClient
                         //       This first connection is established to SqlExpress to get the instance name
                         //       of the UserInstance.
                         SqlConnectionString sseopt = new SqlConnectionString(opt, opt.DataSource, userInstance: true, setEnlistValue: false);
-                        sseConnection = new SqlInternalConnectionTds(identity, sseopt, key.Credential, null, "", null, false, applyTransientFaultHandling: applyTransientFaultHandling);
+                        sseConnection = new SqlInternalConnectionTds(identity, sseopt, key.Credential, null, "", null, false, key.ClientCertificate, applyTransientFaultHandling: applyTransientFaultHandling);
                         // NOTE: Retrieve <UserInstanceName> here. This user instance name will be used below to connect to the Sql Express User Instance.
                         instanceName = sseConnection.InstanceName;
 
@@ -133,7 +133,7 @@ namespace Microsoft.Data.SqlClient
                 opt = new SqlConnectionString(opt, instanceName, userInstance: false, setEnlistValue: null);
                 poolGroupProviderInfo = null; // null so we do not pass to constructor below...
             }
-            return new SqlInternalConnectionTds(identity, opt, key.Credential, poolGroupProviderInfo, "", null, redirectedUserInstance, userOpt, recoverySessionData, applyTransientFaultHandling: applyTransientFaultHandling, key.AccessToken, pool);
+            return new SqlInternalConnectionTds(identity, opt, key.Credential, poolGroupProviderInfo, "", null, redirectedUserInstance, key.ClientCertificate, userOpt, recoverySessionData, applyTransientFaultHandling: applyTransientFaultHandling, key.AccessToken, pool);
         }
 
         protected override DbConnectionOptions CreateConnectionOptions(string connectionString, DbConnectionOptions previous)
@@ -207,6 +207,7 @@ namespace Microsoft.Data.SqlClient
 
         internal static SqlConnectionString FindSqlConnectionOptions(SqlConnectionPoolKey key)
         {
+            //TODO: ADD Support for Client Certificate
             SqlConnectionString connectionOptions = (SqlConnectionString)SingletonInstance.FindConnectionOptions(key);
             if (null == connectionOptions)
             {

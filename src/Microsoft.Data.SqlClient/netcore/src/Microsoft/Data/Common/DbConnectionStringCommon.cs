@@ -109,6 +109,7 @@ namespace Microsoft.Data.Common
         internal const string ActiveDirectoryManagedIdentityString = "Active Directory Managed Identity";
         internal const string ActiveDirectoryMSIString = "Active Directory MSI";
         internal const string ActiveDirectoryDefaultString = "Active Directory Default";
+        internal const string SqlCertificateDefaultString = "SQL Certificate";
 
 #if DEBUG
         private static string[] s_supportedAuthenticationModes =
@@ -122,7 +123,8 @@ namespace Microsoft.Data.Common
             "ActiveDirectoryDeviceCodeFlow",
             "ActiveDirectoryManagedIdentity",
             "ActiveDirectoryMSI",
-            "ActiveDirectoryDefault"
+            "ActiveDirectoryDefault",
+            "SqlCertificate"
         };
 
         private static bool IsValidAuthenticationMethodEnum()
@@ -202,6 +204,12 @@ namespace Microsoft.Data.Common
                 || StringComparer.InvariantCultureIgnoreCase.Equals(value, Convert.ToString(SqlAuthenticationMethod.ActiveDirectoryDefault, CultureInfo.InvariantCulture)))
             {
                 result = SqlAuthenticationMethod.ActiveDirectoryDefault;
+                isSuccess = true;
+            }
+            else if (StringComparer.InvariantCultureIgnoreCase.Equals(value, SqlCertificateDefaultString)
+               || StringComparer.InvariantCultureIgnoreCase.Equals(value, Convert.ToString(SqlAuthenticationMethod.SqlCertificate, CultureInfo.InvariantCulture)))
+            {
+                result = SqlAuthenticationMethod.SqlCertificate;
                 isSuccess = true;
             }
             else
@@ -648,7 +656,7 @@ namespace Microsoft.Data.Common
 
         internal static bool IsValidAuthenticationTypeValue(SqlAuthenticationMethod value)
         {
-            Debug.Assert(Enum.GetNames(typeof(SqlAuthenticationMethod)).Length == 10, "SqlAuthenticationMethod enum has changed, update needed");
+            Debug.Assert(Enum.GetNames(typeof(SqlAuthenticationMethod)).Length == 11, "SqlAuthenticationMethod enum has changed, update needed");
             return value == SqlAuthenticationMethod.SqlPassword
                 || value == SqlAuthenticationMethod.ActiveDirectoryPassword
                 || value == SqlAuthenticationMethod.ActiveDirectoryIntegrated
@@ -658,7 +666,8 @@ namespace Microsoft.Data.Common
                 || value == SqlAuthenticationMethod.ActiveDirectoryManagedIdentity
                 || value == SqlAuthenticationMethod.ActiveDirectoryMSI
                 || value == SqlAuthenticationMethod.ActiveDirectoryDefault
-                || value == SqlAuthenticationMethod.NotSpecified;
+                || value == SqlAuthenticationMethod.NotSpecified
+                || value == SqlAuthenticationMethod.SqlCertificate;
         }
 
         internal static string AuthenticationTypeToString(SqlAuthenticationMethod value)
@@ -685,6 +694,8 @@ namespace Microsoft.Data.Common
                     return ActiveDirectoryMSIString;
                 case SqlAuthenticationMethod.ActiveDirectoryDefault:
                     return ActiveDirectoryDefaultString;
+                case SqlAuthenticationMethod.SqlCertificate:
+                    return SqlCertificateDefaultString;
                 default:
                     return null;
             }
@@ -879,6 +890,9 @@ namespace Microsoft.Data.Common
         internal const string EnclaveAttestationUrl = _emptyString;
         internal const SqlConnectionAttestationProtocol AttestationProtocol = SqlConnectionAttestationProtocol.NotSpecified;
         internal const SqlConnectionIPAddressPreference IPAddressPreference = SqlConnectionIPAddressPreference.IPv4First;
+        internal const string ClientCertificate = _emptyString;
+        internal const string ClientKey = _emptyString;
+        internal const string ClientKeyPassword = _emptyString;
     }
 
 
@@ -916,6 +930,9 @@ namespace Microsoft.Data.Common
         internal const string EnclaveAttestationUrl = "Enclave Attestation Url";
         internal const string AttestationProtocol = "Attestation Protocol";
         internal const string IPAddressPreference = "IP Address Preference";
+        internal const string ClientCertificate = "ClientCertificate";
+        internal const string ClientKey = "ClientKey";
+        internal const string ClientKeyPassword = "ClientKeyPassword";
 
         // common keywords (OleDb, OracleClient, SqlClient)
         internal const string DataSource = "Data Source";

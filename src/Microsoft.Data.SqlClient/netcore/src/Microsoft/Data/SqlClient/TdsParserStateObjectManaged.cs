@@ -4,6 +4,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Microsoft.Data.Common;
 
@@ -311,13 +312,13 @@ namespace Microsoft.Data.SqlClient.SNI
             return TdsEnums.SNI_ERROR;
         }
 
-        internal override uint EnableSsl(ref uint info)
+        internal override uint EnableSsl(ref uint info, X509Certificate clientCertificate)
         {
             SNIHandle handle = Handle;
             try
             {
                 SqlClientEventSource.Log.TryTraceEvent("TdsParserStateObjectManaged.EnableSsl | Info | Session Id {0}", handle?.ConnectionId);
-                return handle.EnableSsl(info);
+                return handle.EnableSsl(info, clientCertificate);
             }
             catch (Exception e)
             {

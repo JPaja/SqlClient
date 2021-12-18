@@ -3,6 +3,8 @@
 // See the LICENSE file in the project root for more information.
 
 using System.IO;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Microsoft.SqlServer.TDS.EndPoint
 {
@@ -54,8 +56,10 @@ namespace Microsoft.SqlServer.TDS.EndPoint
                             // Check the client context for encryption state
                             if (Client.Context.Encryption != TDSEncryptionType.Off)
                             {
-                                // Turn on encryption before sending the response								
-                                EnableClientTransportEncryption(Client.Context.ServerHost);
+                                //TODO: Parse Client certificate and Client Key for encryption
+                                // Turn on encryption before sending the response	
+                                X509Certificate2 certificate = null;				
+                                EnableClientTransportEncryption(Client.Context.ServerHost, certificate);
                             }
 
                             break;

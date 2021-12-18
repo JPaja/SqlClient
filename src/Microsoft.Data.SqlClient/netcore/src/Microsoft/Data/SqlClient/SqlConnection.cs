@@ -16,6 +16,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Common;
@@ -46,6 +47,7 @@ namespace Microsoft.Data.SqlClient
         private Tuple<TaskCompletionSource<DbConnectionInternal>, Task> _currentCompletion;
 
         private SqlCredential _credential;
+        private X509Certificate2 _clientCertificate;
         private string _connectionString;
         private int _connectRetryCount;
         private string _accessToken; // Access Token to be used for token based authentication
@@ -148,6 +150,7 @@ namespace Microsoft.Data.SqlClient
         /// <include file='../../../../../../../doc/snippets/Microsoft.Data.SqlClient/SqlConnection.xml' path='docs/members[@name="SqlConnection"]/ctorConnectionStringCredential/*' />
         public SqlConnection(string connectionString, SqlCredential credential) : this()
         {
+            //TODO: Make constructor for SqlConnection with ClientCertificate
             ConnectionString = connectionString;
             if (credential != null)
             {
@@ -196,6 +199,23 @@ namespace Microsoft.Data.SqlClient
             //      checking pool groups which is not necessary. All necessary operation is already done by calling "ConnectionString = connectionString"
         }
 
+        /// <include file='../../../../../../../doc/snippets/Microsoft.Data.SqlClient/SqlConnection.xml' path='docs/members[@name="SqlConnection"]/ctorConnectionStringCertificate/*' />
+        public SqlConnection(string connectionString, X509Certificate2 clientCertificate) : this()
+        {
+            //TODO: Make constructor for SqlConnection with ClientCertificate
+            ConnectionString = connectionString;
+            if (clientCertificate != null)
+            {
+                SqlConnectionString connectionOptions = (SqlConnectionString)ConnectionOptions;
+
+                if (!clientCertificate.HasPrivateKey)
+                    throw SQL.CertificateDoesNotHavePrivateKey();
+
+                ClientCertificate = clientCertificate;
+            }
+    
+        }
+
         private SqlConnection(SqlConnection connection)
         {
             GC.SuppressFinalize(this);
@@ -207,6 +227,7 @@ namespace Microsoft.Data.SqlClient
                 password.MakeReadOnly();
                 _credential = new SqlCredential(connection._credential.UserId, password);
             }
+            _clientCertificate = connection.ClientCertificate;
 
             _accessToken = connection._accessToken;
             CacheConnectionStringProperties();
@@ -590,12 +611,17 @@ namespace Microsoft.Data.SqlClient
 
                         CheckAndThrowOnInvalidCombinationOfConnectionStringAndSqlCredential(connectionOptions);
                     }
+                    else if (_clientCertificate != null)
+                    {
+                        if (!_clientCertificate.HasPrivateKey)
+                            throw SQL.CertificateDoesNotHavePrivateKey();
+                    }
                     else if (_accessToken != null)
                     {
                         CheckAndThrowOnInvalidCombinationOfConnectionOptionAndAccessToken(connectionOptions);
                     }
                 }
-                ConnectionString_Set(new SqlConnectionPoolKey(value, _credential, _accessToken));
+                ConnectionString_Set(new SqlConnectionPoolKey(value, _credential, _accessToken, _clientCertificate));
                 _connectionString = value;  // Change _connectionString value only after value is validated
                 CacheConnectionStringProperties();
             }
@@ -648,8 +674,54 @@ namespace Microsoft.Data.SqlClient
                 }
 
                 // Need to call ConnectionString_Set to do proper pool group check
-                ConnectionString_Set(new SqlConnectionPoolKey(_connectionString, credential: _credential, accessToken: value));
+                ConnectionString_Set(new SqlConnectionPoolKey(_connectionString, credential: _credential, accessToken: value, clientCertificate: _clientCertificate));
                 _accessToken = value;
+            }
+        }
+
+        /// <include file='../../../../../../../doc/snippets/Microsoft.Data.SqlClient/SqlConnection.xml' path='docs/members[@name="SqlConnection"]/AccessToken/*' />
+        // ClientCertificate: To be used for certificate based authentication
+        public X509Certificate2 ClientCertificate
+        {
+            get
+            {
+                return _clientCertificate;
+            }
+
+            set
+            {
+                // If a connection is connecting or is ever opened, certificate cannot be set
+                if (!InnerConnection.AllowSetConnectionString)
+                {
+                    throw ADP.OpenConnectionPropertySet(nameof(ClientCertificate), InnerConnection.State);
+                }
+
+                // check if the usage of credential has any conflict with the keys used in connection string
+                if (value != null)
+                {
+                    var connectionOptions = (SqlConnectionString)ConnectionOptions;
+
+                    if (!value.HasPrivateKey)
+                        throw SQL.CertificateDoesNotHavePrivateKey();
+
+                    //TODO: Replace exceptions with mixed ceredentials to mixed certificate
+
+                    if (_accessToken != null)
+                    {
+                        throw ADP.InvalidMixedUsageOfCredentialAndAccessToken();
+                    }
+
+                    if (_credential != null)
+                    {
+                        //TODO: Make new function for mix of clientCertificate and credentials
+                        throw ADP.InvalidMixedUsageOfCredentialAndAccessToken();
+                    }
+                }
+
+                _clientCertificate = value;
+
+                // Need to call ConnectionString_Set to do proper pool group check
+                ConnectionString_Set(new SqlConnectionPoolKey(_connectionString, _credential, accessToken: _accessToken, clientCertificate: _clientCertificate));
             }
         }
 
@@ -910,12 +982,18 @@ namespace Microsoft.Data.SqlClient
                     {
                         throw ADP.InvalidMixedUsageOfCredentialAndAccessToken();
                     }
+
+                    if (_clientCertificate != null)
+                    {
+                        //TODO: Make new function for mix of clientCertificate and credentials
+                        throw ADP.InvalidMixedUsageOfCredentialAndAccessToken();
+                    }
                 }
 
                 _credential = value;
 
                 // Need to call ConnectionString_Set to do proper pool group check
-                ConnectionString_Set(new SqlConnectionPoolKey(_connectionString, _credential, accessToken: _accessToken));
+                ConnectionString_Set(new SqlConnectionPoolKey(_connectionString, _credential, accessToken: _accessToken, clientCertificate: _clientCertificate));
             }
         }
 
@@ -960,6 +1038,12 @@ namespace Microsoft.Data.SqlClient
             // Check if the usage of AccessToken has the conflict with credential
             if (_credential != null)
             {
+                throw ADP.InvalidMixedUsageOfCredentialAndAccessToken();
+            }
+
+            if (_clientCertificate != null)
+            {
+                //TODO: Make new throw for case with token and certificate
                 throw ADP.InvalidMixedUsageOfCredentialAndAccessToken();
             }
         }
@@ -2028,7 +2112,7 @@ namespace Microsoft.Data.SqlClient
                     throw ADP.InvalidArgumentLength(nameof(newPassword), TdsEnums.MAXLEN_NEWPASSWORD);
                 }
 
-                SqlConnectionPoolKey key = new SqlConnectionPoolKey(connectionString, credential: null, accessToken: null);
+                SqlConnectionPoolKey key = new SqlConnectionPoolKey(connectionString, credential: null, accessToken: null, clientCertificate: null);
 
                 SqlConnectionString connectionOptions = SqlConnectionFactory.FindSqlConnectionOptions(key);
                 if (connectionOptions.IntegratedSecurity)
@@ -2077,7 +2161,7 @@ namespace Microsoft.Data.SqlClient
                     throw ADP.InvalidArgumentLength(nameof(newSecurePassword), TdsEnums.MAXLEN_NEWPASSWORD);
                 }
 
-                SqlConnectionPoolKey key = new SqlConnectionPoolKey(connectionString, credential, accessToken: null);
+                SqlConnectionPoolKey key = new SqlConnectionPoolKey(connectionString, credential, accessToken: null, clientCertificate: null);
 
                 SqlConnectionString connectionOptions = SqlConnectionFactory.FindSqlConnectionOptions(key);
 
@@ -2109,14 +2193,14 @@ namespace Microsoft.Data.SqlClient
             SqlInternalConnectionTds con = null;
             try
             {
-                con = new SqlInternalConnectionTds(null, connectionOptions, credential, null, newPassword, newSecurePassword, false);
+                con = new SqlInternalConnectionTds(null, connectionOptions, credential, null, newPassword, newSecurePassword, false, null);
             }
             finally
             {
                 if (con != null)
                     con.Dispose();
             }
-            SqlConnectionPoolKey key = new SqlConnectionPoolKey(connectionString, credential, accessToken: null);
+            SqlConnectionPoolKey key = new SqlConnectionPoolKey(connectionString, credential, accessToken: null, clientCertificate: null);
 
             SqlConnectionFactory.SingletonInstance.ClearPool(key);
         }

@@ -250,7 +250,7 @@ namespace Microsoft.Data.SqlClient.SNI
                     _tcpStream = new SNINetworkStream(_socket, true);
 
                     _sslOverTdsStream = new SslOverTdsStream(_tcpStream, _connectionId);
-                    _sslStream = new SNISslStream(_sslOverTdsStream, true, new RemoteCertificateValidationCallback(ValidateServerCertificate));
+                    _sslStream = new SNISslStream(_sslOverTdsStream, true, new RemoteCertificateValidationCallback(ValidateServerCertificate), new LocalCertificateSelectionCallback(ServerCertificateSelector));
                 }
                 catch (SocketException se)
                 {
@@ -576,13 +576,20 @@ namespace Microsoft.Data.SqlClient.SNI
         /// <summary>
         /// Enable SSL
         /// </summary>
-        public override uint EnableSsl(uint options)
+        public override uint EnableSsl(uint options, X509Certificate clientCertificate)
         {
             _validateCert = (options & TdsEnums.SNI_SSL_VALIDATE_CERTIFICATE) != 0;
 
             try
             {
-                _sslStream.AuthenticateAsClient(_targetServer);
+                if(clientCertificate != null)
+                {
+                    _sslStream.AuthenticateAsClient(_targetServer, new X509CertificateCollection(new[] { clientCertificate}), SslProtocols.Tls12, true);
+                }
+                else
+                {
+                    _sslStream.AuthenticateAsClient(_targetServer);
+                }
                 _sslOverTdsStream.FinishHandshake();
             }
             catch (AuthenticationException aue)
@@ -633,6 +640,32 @@ namespace Microsoft.Data.SqlClient.SNI
             SqlClientEventSource.Log.TrySNITraceEvent(nameof(SNITCPHandle), EventType.INFO, "Connection Id {0}, Certificate will be validated for Target Server name", args0: _connectionId);
             return SNICommon.ValidateSslServerCertificate(_targetServer, cert, policyErrors);
         }
+
+
+        //Hack fix to avoid exception in sslStream.AuthAsClient https://github.com/dotnet/runtime/issues/45680#issuecomment-739912495
+        //Issue should be fixed in .net 6
+        private X509Certificate ServerCertificateSelector(object sender, string targetHost, X509CertificateCollection localCertificates, X509Certificate remoteCertificate, string[] acceptableIssuers)
+        {
+            if (localCertificates != null && localCertificates.Count > 0)
+            {
+                foreach (X509Certificate cert in localCertificates)
+                {
+                    if (!System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
+                        return cert;
+
+                    try
+                    {
+                        return new X509Certificate2(cert.Export(X509ContentType.Pkcs12));
+                    }
+                    catch
+                    {
+                        return cert;
+                    }
+                }
+            }
+            return null;
+        }
+
 
         /// <summary>
         /// Set buffer size

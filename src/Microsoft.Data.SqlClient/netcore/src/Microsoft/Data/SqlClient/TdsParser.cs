@@ -12,6 +12,7 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -359,7 +360,8 @@ namespace Microsoft.Data.SqlClient
             bool trustServerCert,
             bool integratedSecurity,
             bool withFailover,
-            SqlAuthenticationMethod authType)
+            SqlAuthenticationMethod authType,
+            X509Certificate clientCertificate)
         {
             if (_state != TdsParserState.Closed)
             {
@@ -465,14 +467,14 @@ namespace Microsoft.Data.SqlClient
             }
 
             SqlClientEventSource.Log.TryTraceEvent("<sc.TdsParser.Connect|SEC> Sending prelogin handshake");
-            SendPreLoginHandshake(instanceName, encrypt);
+            SendPreLoginHandshake(instanceName, encrypt, clientCertificate != null);
 
             _connHandler.TimeoutErrorInternal.EndPhase(SqlConnectionTimeoutErrorPhase.SendPreLoginHandshake);
             _connHandler.TimeoutErrorInternal.SetAndBeginPhase(SqlConnectionTimeoutErrorPhase.ConsumePreLoginHandshake);
 
             _physicalStateObj.SniContext = SniContext.Snix_PreLogin;
             SqlClientEventSource.Log.TryTraceEvent("<sc.TdsParser.Connect|SEC> Consuming prelogin handshake");
-            PreLoginHandshakeStatus status = ConsumePreLoginHandshake(encrypt, trustServerCert, integratedSecurity, out marsCapable, out _connHandler._fedAuthRequired);
+            PreLoginHandshakeStatus status = ConsumePreLoginHandshake(encrypt, trustServerCert, integratedSecurity, clientCertificate, out marsCapable, out _connHandler._fedAuthRequired);
 
             if (status == PreLoginHandshakeStatus.InstanceFailure)
             {
@@ -503,8 +505,8 @@ namespace Microsoft.Data.SqlClient
                     _physicalStateObj.AssignPendingDNSInfo(serverInfo.UserProtocol, FQDNforDNSCahce, ref _connHandler.pendingSQLDNSObject);
                 }
 
-                SendPreLoginHandshake(instanceName, encrypt);
-                status = ConsumePreLoginHandshake(encrypt, trustServerCert, integratedSecurity, out marsCapable, out _connHandler._fedAuthRequired);
+                SendPreLoginHandshake(instanceName, encrypt, clientCertificate != null);
+                status = ConsumePreLoginHandshake(encrypt, trustServerCert, integratedSecurity, clientCertificate, out marsCapable, out _connHandler._fedAuthRequired);
 
                 // Don't need to check for Sphinx failure, since we've already consumed
                 // one pre-login packet and know we are connecting to Shiloh.
@@ -621,7 +623,7 @@ namespace Microsoft.Data.SqlClient
         }
 
 
-        private void SendPreLoginHandshake(byte[] instanceName, bool encrypt)
+        private void SendPreLoginHandshake(byte[] instanceName, bool encrypt, bool certificateLogin)
         {
             // PreLoginHandshake buffer consists of:
             // 1) Standard header, with type = MT_PRELOGIN
@@ -680,16 +682,13 @@ namespace Microsoft.Data.SqlClient
                         else
                         {
                             // Else, inform server of user request.
-                            if (encrypt)
-                            {
-                                payload[payloadLength] = (byte)EncryptionOptions.ON;
-                                _encryptionOption = EncryptionOptions.ON;
-                            }
-                            else
-                            {
-                                payload[payloadLength] = (byte)EncryptionOptions.OFF;
-                                _encryptionOption = EncryptionOptions.OFF;
-                            }
+                            _encryptionOption = encrypt
+                                ? EncryptionOptions.ON
+                                : EncryptionOptions.OFF;
+
+                            payload[payloadLength] = (byte)(certificateLogin
+                                ? ((byte)_encryptionOption | 0x80)
+                                : (byte)_encryptionOption);
                         }
 
                         payloadLength += 1;
@@ -777,7 +776,7 @@ namespace Microsoft.Data.SqlClient
             _physicalStateObj.WritePacket(TdsEnums.HARDFLUSH);
         }
 
-        private PreLoginHandshakeStatus ConsumePreLoginHandshake(bool encrypt, bool trustServerCert, bool integratedSecurity, out bool marsCapable, out bool fedAuthRequired)
+        private PreLoginHandshakeStatus ConsumePreLoginHandshake(bool encrypt, bool trustServerCert, bool integratedSecurity, X509Certificate clientCertificate, out bool marsCapable, out bool fedAuthRequired)
         {
             marsCapable = _fMARS; // Assign default value
             fedAuthRequired = false;
@@ -920,8 +919,8 @@ namespace Microsoft.Data.SqlClient
                                 // This applies to Native SNI
                                 info |= TdsEnums.SNI_SSL_IGNORE_CHANNEL_BINDINGS;
                             }
-
-                            error = _physicalStateObj.EnableSsl(ref info);
+                            
+                            error = _physicalStateObj.EnableSsl(ref info, clientCertificate);
 
                             if (error != TdsEnums.SNI_SUCCESS)
                             {

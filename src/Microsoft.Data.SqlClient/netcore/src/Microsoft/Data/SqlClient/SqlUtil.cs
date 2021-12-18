@@ -294,6 +294,11 @@ namespace Microsoft.Data.SqlClient
         {
             return ADP.Argument(System.StringsHelper.GetString(Strings.SQL_IntegratedWithPassword));
         }
+        internal static Exception ClientCertificateMissingValue()
+        {
+            return ADP.Argument("Client certificate is not populated");
+        }
+
         internal static Exception InteractiveWithPassword()
         {
             return ADP.Argument(System.StringsHelper.GetString(Strings.SQL_InteractiveWithPassword));
@@ -322,6 +327,11 @@ namespace Microsoft.Data.SqlClient
         {
             return ADP.InvalidOperation(System.StringsHelper.GetString(Strings.SQL_SettingNonInteractiveWithCredential, authenticationMode));
         }
+        static internal Exception CertificateDoesNotHavePrivateKey()
+        {
+            return ADP.InvalidOperation("Client certificate does not have prvate key");
+        }
+
         static internal Exception SettingCredentialWithIntegratedArgument()
         {
             return ADP.Argument(System.StringsHelper.GetString(Strings.SQL_SettingCredentialWithIntegrated));
@@ -1047,6 +1057,39 @@ namespace Microsoft.Data.SqlClient
             0,                              // packet (out of band)
             0                               // window
         };
+
+        //
+        // Certificate
+        //
+
+        internal static Exception ClientCertificateFileNotExsisting(string file)
+        {
+            return ADP.Argument($"Certificate file {file} is not found");
+        }
+        internal static Exception ClientKeyFileNotExsisting(string file)
+        {
+            return ADP.Argument($"Certificate private file {file} is not found");
+        }
+        internal static Exception ClientKeyThumbprintInvaliFormat(string thumbprint)
+        {
+            return ADP.Argument($"Client Certificate thumbprint {thumbprint} is not 20 bytes long hex string");
+        }
+        internal static Exception CertificateParseError()
+        {
+            return ADP.Argument($"Failed to parse certificate with private key");
+        }
+        internal static Exception CertificateThumbprintKeyStoreNotFound(string thumbprint)
+        {
+            return ADP.Argument($"Could not find certificate with thumbprint {thumbprint} in key store");
+        }
+        internal static Exception CertificateSubjectNameKeyStoreNotFound(string subjectName)
+        {
+            return ADP.Argument($"Could not find certificate with subject name {subjectName} in key store");
+        }
+        internal static Exception CertificateSubjectNameMultipleCertificates(string subjectName)
+        {
+            return ADP.Argument($"There are more than 1 certificate with sbject name {subjectName} in key store. Use thumbprint identification instead");
+        }
 
         //
         // MultiSubnetFailover

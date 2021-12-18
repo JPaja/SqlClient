@@ -61,6 +61,10 @@ namespace Microsoft.Data.SqlClient
             CommandTimeout,
             IPAddressPreference,
 
+            ClientCertificate,
+            ClientKey,
+            ClientKeyPassword,
+
             // keep the count value last
             KeywordsCount
         }
@@ -84,6 +88,9 @@ namespace Microsoft.Data.SqlClient
         private string _typeSystemVersion = DbConnectionStringDefaults.TypeSystemVersion;
         private string _userID = DbConnectionStringDefaults.UserID;
         private string _workstationID = DbConnectionStringDefaults.WorkstationID;
+        private string _clientCertificate = DbConnectionStringDefaults.ClientCertificate;
+        private string _clientKey = DbConnectionStringDefaults.ClientKey;
+        private string _clientKeyPassword = DbConnectionStringDefaults.ClientKeyPassword;
 
         private int _commandTimeout = DbConnectionStringDefaults.CommandTimeout;
         private int _connectTimeout = DbConnectionStringDefaults.ConnectTimeout;
@@ -104,6 +111,7 @@ namespace Microsoft.Data.SqlClient
         private bool _pooling = DbConnectionStringDefaults.Pooling;
         private bool _replication = DbConnectionStringDefaults.Replication;
         private bool _userInstance = DbConnectionStringDefaults.UserInstance;
+
         private SqlAuthenticationMethod _authentication = DbConnectionStringDefaults.Authentication;
         private SqlConnectionColumnEncryptionSetting _columnEncryptionSetting = DbConnectionStringDefaults.ColumnEncryptionSetting;
         private string _enclaveAttestationUrl = DbConnectionStringDefaults.EnclaveAttestationUrl;
@@ -152,6 +160,9 @@ namespace Microsoft.Data.SqlClient
             validKeywords[(int)Keywords.EnclaveAttestationUrl] = DbConnectionStringKeywords.EnclaveAttestationUrl;
             validKeywords[(int)Keywords.AttestationProtocol] = DbConnectionStringKeywords.AttestationProtocol;
             validKeywords[(int)Keywords.IPAddressPreference] = DbConnectionStringKeywords.IPAddressPreference;
+            validKeywords[(int)Keywords.ClientCertificate] = DbConnectionStringKeywords.ClientCertificate;
+            validKeywords[(int)Keywords.ClientKey] = DbConnectionStringKeywords.ClientKey;
+            validKeywords[(int)Keywords.ClientKeyPassword] = DbConnectionStringKeywords.ClientKeyPassword;
             return validKeywords;
         }
 
@@ -197,6 +208,9 @@ namespace Microsoft.Data.SqlClient
             hash.Add(DbConnectionStringKeywords.EnclaveAttestationUrl, Keywords.EnclaveAttestationUrl);
             hash.Add(DbConnectionStringKeywords.AttestationProtocol, Keywords.AttestationProtocol);
             hash.Add(DbConnectionStringKeywords.IPAddressPreference, Keywords.IPAddressPreference);
+            hash.Add(DbConnectionStringKeywords.ClientCertificate, Keywords.ClientCertificate);
+            hash.Add(DbConnectionStringKeywords.ClientKey, Keywords.ClientKey);
+            hash.Add(DbConnectionStringKeywords.ClientKeyPassword, Keywords.ClientKeyPassword);
 
             hash.Add(DbConnectionStringSynonyms.IPADDRESSPREFERENCE, Keywords.IPAddressPreference);
             hash.Add(DbConnectionStringSynonyms.APP, Keywords.ApplicationName);
@@ -279,6 +293,15 @@ namespace Microsoft.Data.SqlClient
                             break;
                         case Keywords.InitialCatalog:
                             InitialCatalog = ConvertToString(value);
+                            break;
+                        case Keywords.ClientCertificate:
+                            ClientCertificate = ConvertToString(value);
+                            break;
+                        case Keywords.ClientKey:
+                            ClientKey = ConvertToString(value);
+                            break;
+                        case Keywords.ClientKeyPassword:
+                            ClientKeyPassword = ConvertToString(value);
                             break;
                         //                  case Keywords.NamedConnection:          NamedConnection = ConvertToString(value); break;
                         case Keywords.Password:
@@ -585,6 +608,45 @@ namespace Microsoft.Data.SqlClient
             {
                 SetValue(DbConnectionStringKeywords.InitialCatalog, value);
                 _initialCatalog = value;
+            }
+        }
+
+        /// <summary>
+        /// ClientCertificate
+        /// </summary>
+        public string ClientCertificate
+        {
+            get { return _clientCertificate; }
+            set
+            {
+                SetValue(DbConnectionStringKeywords.ClientCertificate, value);
+                _clientCertificate = value;
+            }
+        }
+
+        /// <summary>
+        /// ClientKey
+        /// </summary>
+        public string ClientKey
+        {
+            get { return _clientKey; }
+            set
+            {
+                SetValue(DbConnectionStringKeywords.ClientKey, value);
+                _clientKey = value;
+            }
+        }
+
+        /// <summary>
+        /// ClientKeyPassword
+        /// </summary>
+        public string ClientKeyPassword
+        {
+            get { return _clientKeyPassword; }
+            set
+            {
+                SetValue(DbConnectionStringKeywords.ClientKeyPassword, value);
+                _clientKeyPassword = value;
             }
         }
 
@@ -1014,6 +1076,12 @@ namespace Microsoft.Data.SqlClient
                     return AttestationProtocol;
                 case Keywords.IPAddressPreference:
                     return IPAddressPreference;
+                case Keywords.ClientCertificate:
+                    return ClientCertificate;
+                case Keywords.ClientKey:
+                    return ClientKey;
+                case Keywords.ClientKeyPassword:
+                    return ClientKeyPassword;
                 default:
                     Debug.Fail("unexpected keyword");
                     throw UnsupportedKeyword(s_validKeywords[(int)index]);
@@ -1163,6 +1231,15 @@ namespace Microsoft.Data.SqlClient
                     break;
                 case Keywords.IPAddressPreference:
                     _ipAddressPreference = DbConnectionStringDefaults.IPAddressPreference;
+                    break;
+                case Keywords.ClientCertificate:
+                    _clientCertificate = DbConnectionStringDefaults.ClientCertificate;
+                    break;
+                case Keywords.ClientKey:
+                    _clientKey = DbConnectionStringDefaults.ClientKey;
+                    break;
+                case Keywords.ClientKeyPassword:
+                    _clientKeyPassword = DbConnectionStringDefaults.ClientKeyPassword;
                     break;
                 default:
                     Debug.Fail("unexpected keyword");

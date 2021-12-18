@@ -5,10 +5,15 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.NetworkInformation;
+using System.Security.Cryptography.X509Certificates;
+using System.Text.RegularExpressions;
 using System.Threading;
 using Microsoft.Data.Common;
+using Microsoft.Data.SqlClient.Criptography;
+//using Microsoft.Data.SqlClient.Microsoft.Data.SqlClient.Criptography;
 
 namespace Microsoft.Data.SqlClient
 {
@@ -102,6 +107,9 @@ namespace Microsoft.Data.SqlClient
             internal const string Connect_Retry_Count = "connect retry count";
             internal const string Connect_Retry_Interval = "connect retry interval";
             internal const string Authentication = "authentication";
+            internal const string ClientCertificate = "clientcertificate";
+            internal const string ClientKey = "clientkey";
+            internal const string ClientKeyPassword = "clientkeypassword";
         }
 
         // Constant for the number of duplicate options in the connection string
@@ -236,6 +244,7 @@ namespace Microsoft.Data.SqlClient
         private readonly string _initialCatalog;
         private readonly string _password;
         private readonly string _userID;
+        private readonly X509Certificate _clientCertificate;
 
         private readonly string _workstationId;
 
@@ -247,6 +256,8 @@ namespace Microsoft.Data.SqlClient
         private static readonly Version constTypeSystemAsmVersion11 = new Version("11.0.0.0");
 
         private readonly string _expandedAttachDBFilename; // expanded during construction so that CreatePermissionSet & Expand are consistent
+
+        private static readonly Regex _certificateThumbprintRegex = new Regex(@"^[a-fA-F0-9]{40}$", RegexOptions.Compiled);
 
         internal SqlConnectionString(string connectionString) : base(connectionString, GetParseSynonyms())
         {
@@ -300,6 +311,70 @@ namespace Microsoft.Data.SqlClient
             // Temporary string - this value is stored internally as an enum.
             string typeSystemVersionString = ConvertValueToString(KEY.Type_System_Version, null);
             string transactionBindingString = ConvertValueToString(KEY.TransactionBinding, null);
+
+            string clientKey = ConvertValueToString(KEY.ClientKey, null);
+            if (clientKey != null)
+            {
+                clientKey = clientKey.Trim();
+                if (string.IsNullOrWhiteSpace(clientKey)) //Empty or whitespace
+                {
+                    throw ADP.InvalidConnectionOptionValue(KEY.ClientKey);
+                }
+                if (clientKey != null && !File.Exists(clientKey))
+                {
+                    throw SQL.ClientKeyFileNotExsisting(clientKey);
+                }
+            }
+
+            string clientKeyPassword = ConvertValueToString(KEY.ClientKeyPassword, null);
+            if(clientKeyPassword != null)
+            {
+                clientKeyPassword = clientKeyPassword.Trim();
+            }
+
+            string clientCertificate = ConvertValueToString(KEY.ClientCertificate, null);
+            if (clientCertificate != null)
+            {
+                var index = clientCertificate.IndexOf(':');
+                if (index < 0)
+                    throw ADP.InvalidConnectionOptionValue(KEY.ClientCertificate);
+                var type = clientCertificate.Substring(0, index).ToLower();
+                var value = clientCertificate.Substring(index + 1);
+                if(string.IsNullOrWhiteSpace(type) || string.IsNullOrWhiteSpace(value))
+                    throw ADP.InvalidConnectionOptionValue(KEY.ClientCertificate);
+                type = type.Trim().ToLower();
+                value = value.Trim();
+                if (type == "file")
+                {
+                    if (!File.Exists(value))
+                        throw SQL.ClientCertificateFileNotExsisting(value);
+                    _clientCertificate = CertificateUtilis.ParseWithPrivateKey(value, clientKey, clientKeyPassword) ?? throw SQL.CertificateParseError();
+                }
+                else if(type == "sha1")
+                {
+                    if (!_certificateThumbprintRegex.IsMatch(value))
+                        throw SQL.ClientKeyThumbprintInvaliFormat(value);
+                    value = value.ToUpper(); //X509FindType.FindByThumbprint requires uppercase hex
+                    var certificates = CertStoreUtils.GetCertificates(X509FindType.FindByThumbprint, value);
+                    if (certificates.Length == 0)
+                        throw SQL.CertificateThumbprintKeyStoreNotFound(value);
+                    _clientCertificate = certificates[0];
+                }
+                else if (type == "subject")
+                {
+                    var certificates = CertStoreUtils.GetCertificates(X509FindType.FindBySubjectName, value);
+                    if (certificates.Length == 0)
+                        throw SQL.CertificateSubjectNameKeyStoreNotFound(value);
+                    if (certificates.Length != 1)
+                        throw SQL.CertificateSubjectNameMultipleCertificates(value);
+                    _clientCertificate = certificates[0];
+                }
+                else
+                {
+                    throw ADP.InvalidConnectionOptionValue(KEY.ClientCertificate);
+                }
+            }
+
 
             _userID = ConvertValueToString(KEY.User_ID, DEFAULT.User_ID);
             _workstationId = ConvertValueToString(KEY.Workstation_Id, null);
@@ -459,9 +534,16 @@ namespace Microsoft.Data.SqlClient
                 throw ADP.InvalidConnectRetryIntervalValue();
             }
 
+            //TODO ClientCertificateAuthentification
+
             if (Authentication != SqlAuthenticationMethod.NotSpecified && _integratedSecurity == true)
             {
                 throw SQL.AuthenticationAndIntegratedSecurity();
+            }
+
+            if (Authentication == SqlClient.SqlAuthenticationMethod.SqlCertificate && !HasClientCertificate)
+            {
+                throw SQL.ClientCertificateMissingValue();
             }
 
             if (Authentication == SqlClient.SqlAuthenticationMethod.ActiveDirectoryIntegrated && HasPasswordKeyword)
@@ -494,6 +576,8 @@ namespace Microsoft.Data.SqlClient
                 throw SQL.NonInteractiveWithPassword(DbConnectionStringBuilderUtil.ActiveDirectoryDefaultString);
             }
         }
+
+
 
         // This c-tor is used to create SSE and user instance connection strings when user instance is set to true
         // BUG (VSTFDevDiv) 479687: Using TransactionScope with Linq2SQL against user instances fails with "connection has been broken" message
@@ -592,6 +676,7 @@ namespace Microsoft.Data.SqlClient
         internal string InitialCatalog { get { return _initialCatalog; } }
         internal string Password { get { return _password; } }
         internal string UserID { get { return _userID; } }
+        internal X509Certificate ClientCertificate { get { return _clientCertificate; } } 
         internal string WorkstationId { get { return _workstationId; } }
 
         internal TypeSystem TypeSystemVersion { get { return _typeSystemVersion; } }
@@ -696,6 +781,10 @@ namespace Microsoft.Data.SqlClient
                     { KEY.Connect_Retry_Interval, KEY.Connect_Retry_Interval },
                     { KEY.Authentication, KEY.Authentication },
                     { KEY.IPAddressPreference, KEY.IPAddressPreference },
+                    { KEY.ClientCertificate, KEY.ClientCertificate },
+                    { KEY.ClientKey, KEY.ClientKey },
+                    { KEY.ClientKeyPassword, KEY.ClientKeyPassword },
+
 
                     { SYNONYM.APP, KEY.Application_Name },
                     { SYNONYM.APPLICATIONINTENT, KEY.ApplicationIntent },

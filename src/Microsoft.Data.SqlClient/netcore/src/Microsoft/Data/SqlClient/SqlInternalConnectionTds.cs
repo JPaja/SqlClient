@@ -11,6 +11,7 @@ using System.Globalization;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -432,12 +433,12 @@ namespace Microsoft.Data.SqlClient
                 string newPassword,
                 SecureString newSecurePassword,
                 bool redirectedUserInstance,
+                X509Certificate clientCertificate,
                 SqlConnectionString userConnectionOptions = null, // NOTE: userConnectionOptions may be different to connectionOptions if the connection string has been expanded (see SqlConnectionString.Expand)
                 SessionData reconnectSessionData = null,
                 bool applyTransientFaultHandling = false,
                 string accessToken = null,
-                DbConnectionPool pool = null
-                ) : base(connectionOptions)
+                DbConnectionPool pool = null) : base(connectionOptions)
 
         {
 #if DEBUG
@@ -504,7 +505,7 @@ namespace Microsoft.Data.SqlClient
                 {
                     try
                     {
-                        OpenLoginEnlist(_timeout, connectionOptions, credential, newPassword, newSecurePassword, redirectedUserInstance);
+                        OpenLoginEnlist(_timeout, connectionOptions, credential, newPassword, newSecurePassword, redirectedUserInstance, clientCertificate);
 
                         break;
                     }
@@ -1364,7 +1365,8 @@ namespace Microsoft.Data.SqlClient
                                     SqlCredential credential,
                                     string newPassword,
                                     SecureString newSecurePassword,
-                                    bool redirectedUserInstance)
+                                    bool redirectedUserInstance,
+                                    X509Certificate  clientCertificate)
         {
             bool useFailoverPartner; // should we use primary or secondary first
             ServerInfo dataSource = new ServerInfo(connectionOptions);
@@ -1402,7 +1404,8 @@ namespace Microsoft.Data.SqlClient
                                 redirectedUserInstance,
                                 connectionOptions,
                                 credential,
-                                timeout);
+                                timeout,
+                                clientCertificate);
                 }
                 else
                 {
@@ -1414,6 +1417,7 @@ namespace Microsoft.Data.SqlClient
                             redirectedUserInstance,
                             connectionOptions,
                             credential,
+                            clientCertificate,
                             timeout);
                 }
                 _timeoutErrorInternal.EndPhase(SqlConnectionTimeoutErrorPhase.PostLogin);
@@ -1458,6 +1462,7 @@ namespace Microsoft.Data.SqlClient
                                      bool redirectedUserInstance,
                                      SqlConnectionString connectionOptions,
                                      SqlCredential credential,
+                                     X509Certificate clientCertificate,
                                      TimeoutTimer timeout)
         {
             Debug.Assert(object.ReferenceEquals(connectionOptions, this.ConnectionOptions), "ConnectionOptions argument and property must be the same"); // consider removing the argument
@@ -1522,7 +1527,8 @@ namespace Microsoft.Data.SqlClient
                                     newPassword,
                                     newSecurePassword,
                                     !connectionOptions.MultiSubnetFailover,    // ignore timeout for SniOpen call unless MSF
-                                    connectionOptions.MultiSubnetFailover ? intervalTimer : timeout);
+                                    connectionOptions.MultiSubnetFailover ? intervalTimer : timeout,
+                                    clientCertificate);
 
                     if (connectionOptions.MultiSubnetFailover && null != ServerProvidedFailOverPartner)
                     {
@@ -1612,7 +1618,8 @@ namespace Microsoft.Data.SqlClient
                                 redirectedUserInstance,
                                 connectionOptions,
                                 credential,
-                                timeout);
+                                timeout,
+                                clientCertificate);
                     return; // LoginWithFailover successfully connected and handled entire connection setup
                 }
 
@@ -1678,7 +1685,8 @@ namespace Microsoft.Data.SqlClient
                 bool redirectedUserInstance,
                 SqlConnectionString connectionOptions,
                 SqlCredential credential,
-                TimeoutTimer timeout
+                TimeoutTimer timeout,
+                X509Certificate clientCertificate
             )
         {
             Debug.Assert(!connectionOptions.MultiSubnetFailover, "MultiSubnetFailover should not be set if failover partner is used");
@@ -1762,6 +1770,7 @@ namespace Microsoft.Data.SqlClient
                             newSecurePassword,
                             false,          // Use timeout in SniOpen
                             intervalTimer,
+                            clientCertificate,
                             withFailover: true
                             );
 
@@ -1865,6 +1874,7 @@ namespace Microsoft.Data.SqlClient
                                 SecureString newSecurePassword,
                                 bool ignoreSniOpenTimeout,
                                 TimeoutTimer timeout,
+                                X509Certificate clientCertificate,
                                 bool withFailover = false)
         {
             SqlClientEventSource.Log.TryAdvancedTraceEvent("<sc.SqlInternalConnectionTds.AttemptOneLogin|ADV> {0}, timout={1}[msec], server={2}", ObjectID, timeout.MillisecondsRemaining, serverInfo.ExtendedServerName);
@@ -1880,7 +1890,8 @@ namespace Microsoft.Data.SqlClient
                             ConnectionOptions.TrustServerCertificate,
                             ConnectionOptions.IntegratedSecurity,
                             withFailover,
-                            ConnectionOptions.Authentication);
+                            ConnectionOptions.Authentication,
+                            clientCertificate ?? ConnectionOptions.ClientCertificate);
 
             _timeoutErrorInternal.EndPhase(SqlConnectionTimeoutErrorPhase.ConsumePreLoginHandshake);
             _timeoutErrorInternal.SetAndBeginPhase(SqlConnectionTimeoutErrorPhase.LoginBegin);

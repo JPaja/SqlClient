@@ -113,6 +113,12 @@ namespace Microsoft.SqlServer.TDS.Servers
             // Generate server response for encryption
             TDSPreLoginTokenEncryptionType serverResponse = TDSUtilities.GetEncryptionResponse(preLoginRequest.Encryption, Arguments.Encryption);
 
+            //TODO: Add flag for client certificate authentification if its requested
+            //if(ClientCertificate)
+            //{
+            //serverResponse |= TDSPreLoginTokenEncryptionType.ClientCertificateOn;
+            //}
+
             // Update client state with encryption resolution
             session.Encryption = TDSUtilities.ResolveEncryption(preLoginRequest.Encryption, serverResponse);
 

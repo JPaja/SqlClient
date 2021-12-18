@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 
 namespace Microsoft.Data.SqlClient.SNI
@@ -563,7 +564,7 @@ namespace Microsoft.Data.SqlClient.SNI
         {
         }
 
-        public override uint EnableSsl(uint options) => _connection.EnableSsl(options);
+        public override uint EnableSsl(uint options, X509Certificate clientCertificate) => _connection.EnableSsl(options, clientCertificate);
 
         public override void DisableSsl() => _connection.DisableSsl();
 

@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -799,7 +800,7 @@ namespace Microsoft.Data.SqlClient
 
         protected abstract void FreeGcHandle(int remaining, bool release);
 
-        internal abstract uint EnableSsl(ref uint info);
+        internal abstract uint EnableSsl(ref uint info, X509Certificate clientCertificate);
 
         internal abstract uint WaitForSSLHandShakeToComplete(out int protocolVersion);
 
